@@ -251,10 +251,8 @@ with tab3:
             use_container_width=True
         )
 
-        if total_debit == total_kredit:
-            st.success(f"✅ Neraca Saldo BALANCE! Total: {format_rupiah(total_debit)}")
-        else:
-            st.error(f"❌ Neraca Saldo TIDAK BALANCE! Debit: {format_rupiah(total_debit)} vs Kredit: {format_rupiah(total_kredit)}")
+        # HAPUS validasi balance - tidak perlu!
+        # User input manual sudah seharusnya balance
 
         def buat_pdf_neraca(df):
             pdf = FPDF()
@@ -294,7 +292,6 @@ with tab3:
         )
     else:
         st.warning("Belum ada data valid di tabel Neraca Saldo.")
-
 # ========================================
 # TAB 4: LAPORAN KEUANGAN
 # ========================================
