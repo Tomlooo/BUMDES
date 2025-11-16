@@ -52,17 +52,17 @@ if "kewajiban" not in st.session_state:
 
 if "arus_kas_operasi" not in st.session_state:
     st.session_state.arus_kas_operasi = pd.DataFrame([
-        {"Aktivitas": "", "Kas Masuk (Rp)": 0, "Kas Keluar (Rp)": 0}
+        {"Aktivitas": "", "Jumlah (Rp)": 0}
     ])
 
 if "arus_kas_investasi" not in st.session_state:
     st.session_state.arus_kas_investasi = pd.DataFrame([
-        {"Aktivitas": "", "Kas Masuk (Rp)": 0, "Kas Keluar (Rp)": 0}
+        {"Aktivitas": "", "Jumlah (Rp)": 0}
     ])
 
 if "arus_kas_pendanaan" not in st.session_state:
     st.session_state.arus_kas_pendanaan = pd.DataFrame([
-        {"Aktivitas": "", "Kas Masuk (Rp)": 0, "Kas Keluar (Rp)": 0}
+        {"Aktivitas": "", "Jumlah (Rp)": 0}
     ])
 
 # === Fungsi format rupiah ===
@@ -237,14 +237,12 @@ with tab3:
     st.subheader("Periode: Januari 2025")
     st.info("💡 Masukkan data saldo akhir dari setiap akun di Buku Besar")
 
-    # Input data menggunakan AgGrid
     new_neraca = create_aggrid(st.session_state.neraca_saldo, "neraca")
     
     if not new_neraca.equals(st.session_state.neraca_saldo):
         st.session_state.neraca_saldo = new_neraca.copy()
         st.toast("💾 Data Neraca Saldo tersimpan!", icon="💾")
 
-    # Filter data yang valid
     df_neraca_clean = new_neraca[new_neraca["Nama Akun"].astype(str).str.strip() != ""]
 
     if not df_neraca_clean.empty:
@@ -322,6 +320,7 @@ with tab4:
     # ========================================
     st.markdown("---")
     st.markdown("### 📈 Laporan Laba/Rugi")
+    st.markdown("**BUMDes**")
     
     st.write("#### Input Pendapatan:")
     new_pendapatan = create_aggrid(st.session_state.pendapatan, "pendapatan")
@@ -335,7 +334,6 @@ with tab4:
         st.session_state.beban = new_beban.copy()
         st.toast("💾 Data Beban tersimpan!", icon="💾")
 
-    # Hitung hasil
     df_pendapatan_clean = new_pendapatan[new_pendapatan["Jenis Pendapatan"].astype(str).str.strip() != ""]
     df_beban_clean = new_beban[new_beban["Jenis Beban"].astype(str).str.strip() != ""]
 
@@ -346,20 +344,45 @@ with tab4:
 
         st.write("### 📊 Hasil Laporan Laba/Rugi")
         
+        # Buat tabel dengan format Excel
         result_data = []
-        result_data.append({"Keterangan": "Pendapatan:", "Jumlah (Rp)": ""})
+        
+        # Header kosong
+        result_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        result_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        result_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        result_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        
+        # Pendapatan
+        result_data.append({"Keterangan": "Pendapatan:", "Kolom2": "", "Jumlah (Rp)": ""})
         for idx, row in df_pendapatan_clean.iterrows():
-            result_data.append({"Keterangan": f"  {row['Jenis Pendapatan']}", "Jumlah (Rp)": row["Jumlah (Rp)"]})
-        result_data.append({"Keterangan": "", "Jumlah (Rp)": ""})
-        result_data.append({"Keterangan": "Total Pendapatan", "Jumlah (Rp)": total_pendapatan})
-        result_data.append({"Keterangan": "", "Jumlah (Rp)": ""})
-        result_data.append({"Keterangan": "Beban-Beban:", "Jumlah (Rp)": ""})
+            result_data.append({"Keterangan": f"{idx+1}. {row['Jenis Pendapatan']}", "Kolom2": "", "Jumlah (Rp)": row["Jumlah (Rp)"]})
+        
+        # Baris kosong
+        result_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        result_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        result_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        
+        # Total Pendapatan
+        result_data.append({"Keterangan": "Total Pendapatan", "Kolom2": "", "Jumlah (Rp)": total_pendapatan})
+        
+        # Beban
+        result_data.append({"Keterangan": "Beban-Beban:", "Kolom2": "", "Jumlah (Rp)": ""})
         for idx, row in df_beban_clean.iterrows():
-            result_data.append({"Keterangan": f"  {row['Jenis Beban']}", "Jumlah (Rp)": row["Jumlah (Rp)"]})
-        result_data.append({"Keterangan": "", "Jumlah (Rp)": ""})
-        result_data.append({"Keterangan": "Total Beban", "Jumlah (Rp)": total_beban})
-        result_data.append({"Keterangan": "", "Jumlah (Rp)": ""})
-        result_data.append({"Keterangan": "Laba Bersih", "Jumlah (Rp)": laba_bersih})
+            result_data.append({"Keterangan": f"{idx+1}. {row['Jenis Beban']}", "Kolom2": "", "Jumlah (Rp)": row["Jumlah (Rp)"]})
+        
+        # Baris kosong
+        result_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        result_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        
+        # Total Beban
+        result_data.append({"Keterangan": "Total Beban", "Kolom2": "", "Jumlah (Rp)": total_beban})
+        
+        # Baris kosong
+        result_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        
+        # Laba Bersih
+        result_data.append({"Keterangan": "Laba Bersih", "Kolom2": "", "Jumlah (Rp)": laba_bersih})
 
         df_labarugi = pd.DataFrame(result_data)
         
@@ -376,6 +399,7 @@ with tab4:
     # ========================================
     st.markdown("---")
     st.markdown("### 💰 Laporan Perubahan Modal")
+    st.markdown("**BUMDes**")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -392,19 +416,30 @@ with tab4:
         modal_akhir = modal_awal + laba_bersih - prive
 
         st.write("### 📊 Hasil Laporan Perubahan Modal")
-        df_modal = pd.DataFrame([
-            {"Keterangan": "Modal Awal", "Jumlah (Rp)": modal_awal},
-            {"Keterangan": "Laba Bersih", "Jumlah (Rp)": laba_bersih},
-            {"Keterangan": "Prive", "Jumlah (Rp)": prive},
-            {"Keterangan": "", "Jumlah (Rp)": ""},
-            {"Keterangan": "Modal Akhir", "Jumlah (Rp)": modal_akhir},
-        ])
+        
+        # Format sesuai Excel
+        modal_data = []
+        modal_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        modal_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        modal_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        modal_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        modal_data.append({"Keterangan": "Modal Awal", "Kolom2": "", "Jumlah (Rp)": modal_awal})
+        modal_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        modal_data.append({"Keterangan": "Laba Bersih", "Kolom2": "", "Jumlah (Rp)": laba_bersih})
+        modal_data.append({"Keterangan": "Prive", "Kolom2": prive, "Jumlah (Rp)": ""})
+        modal_data.append({"Keterangan": "Modal Akhir", "Kolom2": "", "Jumlah (Rp)": modal_akhir})
+        modal_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+        modal_data.append({"Keterangan": "", "Kolom2": "", "Jumlah (Rp)": ""})
+
+        df_modal = pd.DataFrame(modal_data)
 
         st.dataframe(
-            df_modal.style.format({"Jumlah (Rp)": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x})
-            .apply(lambda x: ['font-weight: bold' if i == 4 else '' for i in range(len(x))], axis=0)
+            df_modal.style.format({
+                "Kolom2": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x,
+                "Jumlah (Rp)": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x
+            })
             .set_properties(**{'text-align': 'left'}, subset=['Keterangan'])
-            .set_properties(**{'text-align': 'right'}, subset=['Jumlah (Rp)']),
+            .set_properties(**{'text-align': 'right'}, subset=['Kolom2', 'Jumlah (Rp)']),
             use_container_width=True,
             hide_index=True
         )
@@ -413,7 +448,8 @@ with tab4:
         # 3. LAPORAN NERACA
         # ========================================
         st.markdown("---")
-        st.markdown("### 🏦 Laporan Neraca (Posisi Keuangan)")
+        st.markdown("### 🏦 Laporan Neraca")
+        st.markdown("**BUMDes**")
         
         col1, col2 = st.columns(2)
         
@@ -437,7 +473,6 @@ with tab4:
                 st.session_state.kewajiban = new_kewajiban.copy()
                 st.toast("💾 Data Kewajiban tersimpan!", icon="💾")
 
-        # Hitung total
         df_aktiva_lancar_clean = new_aktiva_lancar[new_aktiva_lancar["Item"].astype(str).str.strip() != ""]
         df_aktiva_tetap_clean = new_aktiva_tetap[new_aktiva_tetap["Item"].astype(str).str.strip() != ""]
         df_kewajiban_clean = new_kewajiban[new_kewajiban["Item"].astype(str).str.strip() != ""]
@@ -452,8 +487,19 @@ with tab4:
 
         st.write("### 📊 Hasil Laporan Neraca")
         
+        # Format sesuai Excel (4 kolom)
         neraca_data = []
-        neraca_data.append({"Aktiva": "Aktiva Lancar:", "Jumlah (Rp)": "", "Passiva": "Kewajiban:", "Jumlah2 (Rp)": ""})
+        
+        # Header kosong
+        neraca_data.append({"Aktiva": "", "Jumlah1": "", "Passiva": "", "Jumlah2": ""})
+        neraca_data.append({"Aktiva": "", "Jumlah1": "", "Passiva": "", "Jumlah2": ""})
+        neraca_data.append({"Aktiva": "", "Jumlah1": "", "Passiva": "", "Jumlah2": ""})
+        
+        # Baris header
+        neraca_data.append({"Aktiva": "Aktiva", "Jumlah1": "", "Passiva": "Passiva", "Jumlah2": ""})
+        
+        # Aktiva Lancar & Kewajiban
+        neraca_data.append({"Aktiva": "Aktiva Lancar:", "Jumlah1": "", "Passiva": "Kewajiban:", "Jumlah2": ""})
         
         max_rows = max(len(df_aktiva_lancar_clean), len(df_kewajiban_clean))
         for i in range(max_rows):
@@ -463,37 +509,47 @@ with tab4:
             kewajiban_val = df_kewajiban_clean.iloc[i]["Jumlah (Rp)"] if i < len(df_kewajiban_clean) else ""
             
             neraca_data.append({
-                "Aktiva": f"  {aktiva_item}",
-                "Jumlah (Rp)": aktiva_val,
-                "Passiva": f"  {kewajiban_item}",
-                "Jumlah2 (Rp)": kewajiban_val
+                "Aktiva": aktiva_item,
+                "Jumlah1": aktiva_val,
+                "Passiva": kewajiban_item,
+                "Jumlah2": kewajiban_val
             })
         
-        neraca_data.append({"Aktiva": "", "Jumlah (Rp)": "", "Passiva": "", "Jumlah2 (Rp)": ""})
-        neraca_data.append({"Aktiva": "Jml aktiva lancar", "Jumlah (Rp)": jml_aktiva_lancar, "Passiva": "Ekuitas:", "Jumlah2 (Rp)": ""})
-        neraca_data.append({"Aktiva": "", "Jumlah (Rp)": "", "Passiva": "  Modal", "Jumlah2 (Rp)": modal_awal})
-        neraca_data.append({"Aktiva": "Aktiva Tetap:", "Jumlah (Rp)": "", "Passiva": "  Laba", "Jumlah2 (Rp)": laba_bersih})
+        # Baris kosong
+        neraca_data.append({"Aktiva": "", "Jumlah1": "", "Passiva": "", "Jumlah2": ""})
+        
+        # Jumlah aktiva lancar & Ekuitas header
+        neraca_data.append({"Aktiva": "Jml aktiva lancar", "Jumlah1": jml_aktiva_lancar, "Passiva": "Ekuitas:", "Jumlah2": ""})
+        neraca_data.append({"Aktiva": "", "Jumlah1": "", "Passiva": "Modal", "Jumlah2": modal_awal})
+        
+        # Aktiva Tetap & Laba
+        neraca_data.append({"Aktiva": "Aktiva Tetap:", "Jumlah1": "", "Passiva": "Laba", "Jumlah2": laba_bersih})
         
         for idx, row in df_aktiva_tetap_clean.iterrows():
             neraca_data.append({
-                "Aktiva": f"  {row['Item']}",
-                "Jumlah (Rp)": row["Jumlah (Rp)"],
-                "Passiva": "  Prive" if idx == df_aktiva_tetap_clean.index[0] else "",
-                "Jumlah2 (Rp)": -prive if idx == df_aktiva_tetap_clean.index[0] else ""
+                "Aktiva": row['Item'],
+                "Jumlah1": row["Jumlah (Rp)"],
+                "Passiva": "Prive" if idx == df_aktiva_tetap_clean.index[0] else "",
+                "Jumlah2": f"({format_rupiah(prive)})" if idx == df_aktiva_tetap_clean.index[0] else ""
             })
         
-        neraca_data.append({"Aktiva": "", "Jumlah (Rp)": "", "Passiva": "", "Jumlah2 (Rp)": ""})
-        neraca_data.append({"Aktiva": "Jml Aktiva", "Jumlah (Rp)": jml_aktiva, "Passiva": "Jml Kewajiban&Ekuitas", "Jumlah2 (Rp)": jml_kewajiban_ekuitas})
+        # Baris kosong
+        neraca_data.append({"Aktiva": "", "Jumlah1": "", "Passiva": "", "Jumlah2": ""})
+        neraca_data.append({"Aktiva": "", "Jumlah1": "", "Passiva": "", "Jumlah2": ""})
+        
+        # Total
+        neraca_data.append({"Aktiva": "Jml Aktiva", "Jumlah1": jml_aktiva, "Passiva": "Jml Kewajiban&Ekuitas", "Jumlah2": jml_kewajiban_ekuitas})
+        neraca_data.append({"Aktiva": "", "Jumlah1": "", "Passiva": "", "Jumlah2": ""})
 
         df_neraca_lap = pd.DataFrame(neraca_data)
 
         st.dataframe(
             df_neraca_lap.style.format({
-                "Jumlah (Rp)": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x,
-                "Jumlah2 (Rp)": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x
+                "Jumlah1": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x,
+                "Jumlah2": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x
             })
             .set_properties(**{'text-align': 'left'}, subset=['Aktiva', 'Passiva'])
-            .set_properties(**{'text-align': 'right'}, subset=['Jumlah (Rp)', 'Jumlah2 (Rp)']),
+            .set_properties(**{'text-align': 'right'}, subset=['Jumlah1', 'Jumlah2']),
             use_container_width=True,
             hide_index=True
         )
@@ -508,6 +564,7 @@ with tab4:
         # ========================================
         st.markdown("---")
         st.markdown("### 💸 Laporan Arus Kas")
+        st.markdown("**BUMDes**")
 
         st.write("#### Arus Kas Operasi:")
         new_arus_operasi = create_aggrid(st.session_state.arus_kas_operasi, "operasi")
@@ -527,7 +584,6 @@ with tab4:
             st.session_state.arus_kas_pendanaan = new_arus_pendanaan.copy()
             st.toast("💾 Data Arus Kas Pendanaan tersimpan!", icon="💾")
 
-        # Tampilkan hasil
         df_operasi_clean = new_arus_operasi[new_arus_operasi["Aktivitas"].astype(str).str.strip() != ""]
         df_investasi_clean = new_arus_investasi[new_arus_investasi["Aktivitas"].astype(str).str.strip() != ""]
         df_pendanaan_clean = new_arus_pendanaan[new_arus_pendanaan["Aktivitas"].astype(str).str.strip() != ""]
@@ -535,42 +591,60 @@ with tab4:
         if not df_operasi_clean.empty or not df_investasi_clean.empty or not df_pendanaan_clean.empty:
             st.write("### 📊 Hasil Laporan Arus Kas")
             
+            # Format sesuai Excel (3 kolom)
             arus_kas_data = []
-            arus_kas_data.append({"Aktivitas": "Arus Kas Operasi:", "Kas Masuk (Rp)": "", "Kas Keluar (Rp)": ""})
+            
+            # Header kosong
+            arus_kas_data.append({"Aktivitas": "", "Kolom2": "", "Jumlah": ""})
+            arus_kas_data.append({"Aktivitas": "", "Kolom2": "", "Jumlah": ""})
+            arus_kas_data.append({"Aktivitas": "", "Kolom2": "", "Jumlah": ""})
+            
+            # Arus Kas Operasi
+            arus_kas_data.append({"Aktivitas": "Arus Kas Operasi:", "Kolom2": "", "Jumlah": ""})
             for _, row in df_operasi_clean.iterrows():
                 arus_kas_data.append({
-                    "Aktivitas": f"  {row['Aktivitas']}",
-                    "Kas Masuk (Rp)": row["Kas Masuk (Rp)"],
-                    "Kas Keluar (Rp)": row["Kas Keluar (Rp)"]
+                    "Aktivitas": row['Aktivitas'],
+                    "Kolom2": "",
+                    "Jumlah": row["Jumlah (Rp)"]
                 })
             
-            arus_kas_data.append({"Aktivitas": "", "Kas Masuk (Rp)": "", "Kas Keluar (Rp)": ""})
-            arus_kas_data.append({"Aktivitas": "Arus Kas Investasi:", "Kas Masuk (Rp)": "", "Kas Keluar (Rp)": ""})
+            # Baris kosong
+            arus_kas_data.append({"Aktivitas": "", "Kolom2": "", "Jumlah": ""})
+            arus_kas_data.append({"Aktivitas": "", "Kolom2": "", "Jumlah": ""})
+            
+            # Arus Kas Investasi
+            arus_kas_data.append({"Aktivitas": "Arus Kas Investasi:", "Kolom2": "", "Jumlah": ""})
             for _, row in df_investasi_clean.iterrows():
                 arus_kas_data.append({
-                    "Aktivitas": f"  {row['Aktivitas']}",
-                    "Kas Masuk (Rp)": row["Kas Masuk (Rp)"],
-                    "Kas Keluar (Rp)": row["Kas Keluar (Rp)"]
+                    "Aktivitas": row['Aktivitas'],
+                    "Kolom2": "",
+                    "Jumlah": row["Jumlah (Rp)"]
                 })
             
-            arus_kas_data.append({"Aktivitas": "", "Kas Masuk (Rp)": "", "Kas Keluar (Rp)": ""})
-            arus_kas_data.append({"Aktivitas": "Arus Kas Pendanaan:", "Kas Masuk (Rp)": "", "Kas Keluar (Rp)": ""})
+            # Baris kosong
+            arus_kas_data.append({"Aktivitas": "", "Kolom2": "", "Jumlah": ""})
+            arus_kas_data.append({"Aktivitas": "", "Kolom2": "", "Jumlah": ""})
+            
+            # Arus Kas Pendanaan
+            arus_kas_data.append({"Aktivitas": "Arus Kas Pendanaan:", "Kolom2": "", "Jumlah": ""})
             for _, row in df_pendanaan_clean.iterrows():
                 arus_kas_data.append({
-                    "Aktivitas": f"  {row['Aktivitas']}",
-                    "Kas Masuk (Rp)": row["Kas Masuk (Rp)"],
-                    "Kas Keluar (Rp)": row["Kas Keluar (Rp)"]
+                    "Aktivitas": row['Aktivitas'],
+                    "Kolom2": "",
+                    "Jumlah": row["Jumlah (Rp)"]
                 })
+            
+            # Baris kosong
+            arus_kas_data.append({"Aktivitas": "", "Kolom2": "", "Jumlah": ""})
 
             df_arus_kas = pd.DataFrame(arus_kas_data)
 
             st.dataframe(
                 df_arus_kas.style.format({
-                    "Kas Masuk (Rp)": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x,
-                    "Kas Keluar (Rp)": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x
+                    "Jumlah": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x
                 })
                 .set_properties(**{'text-align': 'left'}, subset=['Aktivitas'])
-                .set_properties(**{'text-align': 'right'}, subset=['Kas Masuk (Rp)', 'Kas Keluar (Rp)']),
+                .set_properties(**{'text-align': 'right'}, subset=['Jumlah']),
                 use_container_width=True,
                 hide_index=True
             )
