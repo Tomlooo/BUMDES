@@ -237,7 +237,7 @@ with tab2:
     st.info("Fitur ini sedang dalam pengembangan 🚧")
 
 # ========================================
-# TAB 3: NERACA SALDO (FIX TOMBOL TAMBAH)
+# TAB 3: NERACA SALDO (DENGAN FITUR HAPUS BARIS TERTENTU)
 # ========================================
 with tab3:
     st.header("⚖️ Neraca Saldo BUMDes")
@@ -245,7 +245,7 @@ with tab3:
     st.info("💡 Masukkan data saldo akhir dari setiap akun di Buku Besar. Klik 'Tambah Baris' untuk menambah data baru.")
 
     # Tombol kontrol
-    col1, col2, col3, col4 = st.columns([1, 1, 1, 3])
+    col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 2])
     
     # Counter untuk force refresh AgGrid
     if "neraca_refresh_counter" not in st.session_state:
@@ -255,7 +255,7 @@ with tab3:
         if st.button("➕ Tambah 1 Baris", key="tambah_neraca_1", use_container_width=True):
             new_row = pd.DataFrame([{"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
             st.session_state.neraca_saldo = pd.concat([st.session_state.neraca_saldo, new_row], ignore_index=True)
-            st.session_state.neraca_refresh_counter += 1  # Force refresh
+            st.session_state.neraca_refresh_counter += 1
             st.rerun()
     
     with col2:
@@ -268,11 +268,11 @@ with tab3:
                 {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
             ])
             st.session_state.neraca_saldo = pd.concat([st.session_state.neraca_saldo, new_rows], ignore_index=True)
-            st.session_state.neraca_refresh_counter += 1  # Force refresh
+            st.session_state.neraca_refresh_counter += 1
             st.rerun()
     
     with col3:
-        if st.button("🗑️ Hapus Kosong", key="hapus_neraca", use_container_width=True):
+        if st.button("🗑️ Hapus Kosong", key="hapus_neraca_kosong", use_container_width=True):
             st.session_state.neraca_saldo = st.session_state.neraca_saldo[
                 st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""
             ].reset_index(drop=True)
@@ -281,13 +281,57 @@ with tab3:
                 st.session_state.neraca_saldo = pd.DataFrame([
                     {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
                 ])
-            st.session_state.neraca_refresh_counter += 1  # Force refresh
+            st.session_state.neraca_refresh_counter += 1
             st.rerun()
+    
+    with col4:
+        if st.button("🔄 Reset Semua", key="reset_neraca", use_container_width=True):
+            if st.session_state.get("confirm_reset_neraca", False):
+                st.session_state.neraca_saldo = pd.DataFrame([
+                    {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
+                ])
+                st.session_state.neraca_refresh_counter += 1
+                st.session_state.confirm_reset_neraca = False
+                st.success("✅ Semua data telah dihapus!")
+                st.rerun()
+            else:
+                st.session_state.confirm_reset_neraca = True
+                st.warning("⚠️ Klik sekali lagi untuk konfirmasi hapus SEMUA data!")
+                st.rerun()
 
     # Info jumlah baris
     total_rows = len(st.session_state.neraca_saldo)
     filled_rows = len(st.session_state.neraca_saldo[st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""])
     st.caption(f"📊 Total Baris: {total_rows} | Terisi: {filled_rows} | Kosong: {total_rows - filled_rows}")
+
+    # Checkbox untuk pilih baris yang akan dihapus
+    if filled_rows > 0:
+        with st.expander("🗑️ Hapus Baris Tertentu", expanded=False):
+            st.write("**Centang baris yang ingin dihapus:**")
+            
+            rows_to_delete = []
+            df_display = st.session_state.neraca_saldo[st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""]
+            
+            for idx, row in df_display.iterrows():
+                col_check, col_info = st.columns([1, 5])
+                with col_check:
+                    if st.checkbox("", key=f"check_neraca_{idx}"):
+                        rows_to_delete.append(idx)
+                with col_info:
+                    st.text(f"#{idx+1} | {row['No Akun']} | {row['Nama Akun']} | Debit: {format_rupiah(row['Debit (Rp)'])} | Kredit: {format_rupiah(row['Kredit (Rp)'])}")
+            
+            if rows_to_delete:
+                if st.button(f"🗑️ Hapus {len(rows_to_delete)} Baris Terpilih", key="hapus_terpilih", use_container_width=True):
+                    st.session_state.neraca_saldo = st.session_state.neraca_saldo.drop(rows_to_delete).reset_index(drop=True)
+                    
+                    if len(st.session_state.neraca_saldo) == 0:
+                        st.session_state.neraca_saldo = pd.DataFrame([
+                            {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
+                        ])
+                    
+                    st.session_state.neraca_refresh_counter += 1
+                    st.success(f"✅ {len(rows_to_delete)} baris telah dihapus!")
+                    st.rerun()
 
     # Input data menggunakan AgGrid dengan key yang berubah
     aggrid_key = f"neraca_{st.session_state.neraca_refresh_counter}"
@@ -311,7 +355,7 @@ with tab3:
         enable_enterprise_modules=False,
         theme="streamlit",
         height=400,
-        key=aggrid_key,  # Key yang berubah setiap kali tombol diklik
+        key=aggrid_key,
         reload_data=True
     )
     
@@ -348,19 +392,17 @@ with tab3:
             use_container_width=True
         )
 
-        # Fungsi PDF
+        # Fungsi PDF (sama seperti sebelumnya)
         def buat_pdf_neraca(df):
             pdf = FPDF()
             pdf.add_page()
             
-            # Header
             pdf.set_font("Arial", 'B', 14)
             pdf.cell(0, 10, txt="Neraca Saldo BUMDes", ln=True, align="C")
             pdf.set_font("Arial", '', 12)
             pdf.cell(0, 8, txt="Periode: Januari 2025", ln=True, align="C")
             pdf.ln(5)
 
-            # Table Header
             pdf.set_font("Arial", 'B', 10)
             col_widths = [15, 25, 70, 40, 40]
             headers = ["No", "No Akun", "Nama Akun", "Debit (Rp)", "Kredit (Rp)"]
@@ -369,7 +411,6 @@ with tab3:
                 pdf.cell(col_widths[i], 10, header, border=1, align="C")
             pdf.ln()
 
-            # Table Content
             pdf.set_font("Arial", '', 9)
             for idx, row in df.iterrows():
                 pdf.cell(col_widths[0], 8, str(idx), border=1, align="C")
