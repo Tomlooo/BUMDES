@@ -237,19 +237,19 @@ with tab2:
     st.info("Fitur ini sedang dalam pengembangan 🚧")
 
 # ========================================
-# TAB 3: NERACA SALDO (DENGAN FITUR HAPUS BARIS TERTENTU)
+# TAB 3: NERACA SALDO (VERSI LENGKAP + HAPUS BARIS TERTENTU)
 # ========================================
 with tab3:
     st.header("⚖️ Neraca Saldo BUMDes")
     st.subheader("Periode: Januari 2025")
     st.info("💡 Masukkan data saldo akhir dari setiap akun di Buku Besar. Klik 'Tambah Baris' untuk menambah data baru.")
 
-    # Tombol kontrol
-    col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 2])
-    
     # Counter untuk force refresh AgGrid
     if "neraca_refresh_counter" not in st.session_state:
         st.session_state.neraca_refresh_counter = 0
+    
+    # Tombol kontrol - BARIS PERTAMA
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         if st.button("➕ Tambah 1 Baris", key="tambah_neraca_1", use_container_width=True):
@@ -283,57 +283,80 @@ with tab3:
                 ])
             st.session_state.neraca_refresh_counter += 1
             st.rerun()
-    
-    with col4:
-        if st.button("🔄 Reset Semua", key="reset_neraca", use_container_width=True):
-            if st.session_state.get("confirm_reset_neraca", False):
-                st.session_state.neraca_saldo = pd.DataFrame([
-                    {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
-                ])
-                st.session_state.neraca_refresh_counter += 1
-                st.session_state.confirm_reset_neraca = False
-                st.success("✅ Semua data telah dihapus!")
-                st.rerun()
-            else:
-                st.session_state.confirm_reset_neraca = True
-                st.warning("⚠️ Klik sekali lagi untuk konfirmasi hapus SEMUA data!")
-                st.rerun()
 
     # Info jumlah baris
     total_rows = len(st.session_state.neraca_saldo)
     filled_rows = len(st.session_state.neraca_saldo[st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""])
     st.caption(f"📊 Total Baris: {total_rows} | Terisi: {filled_rows} | Kosong: {total_rows - filled_rows}")
 
-    # Checkbox untuk pilih baris yang akan dihapus
+    # ========================================
+    # FITUR BARU: HAPUS BARIS TERTENTU
+    # ========================================
     if filled_rows > 0:
-        with st.expander("🗑️ Hapus Baris Tertentu", expanded=False):
-            st.write("**Centang baris yang ingin dihapus:**")
-            
-            rows_to_delete = []
-            df_display = st.session_state.neraca_saldo[st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""]
-            
-            for idx, row in df_display.iterrows():
-                col_check, col_info = st.columns([1, 5])
-                with col_check:
-                    if st.checkbox("", key=f"check_neraca_{idx}"):
-                        rows_to_delete.append(idx)
-                with col_info:
-                    st.text(f"#{idx+1} | {row['No Akun']} | {row['Nama Akun']} | Debit: {format_rupiah(row['Debit (Rp)'])} | Kredit: {format_rupiah(row['Kredit (Rp)'])}")
-            
-            if rows_to_delete:
-                if st.button(f"🗑️ Hapus {len(rows_to_delete)} Baris Terpilih", key="hapus_terpilih", use_container_width=True):
-                    st.session_state.neraca_saldo = st.session_state.neraca_saldo.drop(rows_to_delete).reset_index(drop=True)
-                    
-                    if len(st.session_state.neraca_saldo) == 0:
-                        st.session_state.neraca_saldo = pd.DataFrame([
-                            {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
-                        ])
-                    
-                    st.session_state.neraca_refresh_counter += 1
-                    st.success(f"✅ {len(rows_to_delete)} baris telah dihapus!")
-                    st.rerun()
+        st.markdown("---")
+        st.subheader("🗑️ Hapus Baris Tertentu")
+        
+        df_display = st.session_state.neraca_saldo[st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""]
+        
+        # Input nomor baris yang ingin dihapus
+        col_input, col_button = st.columns([3, 1])
+        
+        with col_input:
+            baris_hapus = st.text_input(
+                "Masukkan nomor baris yang ingin dihapus (pisahkan dengan koma untuk hapus banyak, contoh: 1,3,5)",
+                key="input_hapus_neraca",
+                placeholder="Contoh: 1 atau 1,2,3"
+            )
+        
+        with col_button:
+            st.write("")  # Spacing
+            st.write("")  # Spacing
+            if st.button("🗑️ Hapus Baris", key="btn_hapus_tertentu", use_container_width=True):
+                if baris_hapus.strip():
+                    try:
+                        # Parse nomor baris
+                        nomor_baris = [int(x.strip()) for x in baris_hapus.split(",")]
+                        
+                        # Validasi nomor baris
+                        valid_nomor = [n for n in nomor_baris if 1 <= n <= filled_rows]
+                        
+                        if valid_nomor:
+                            # Konversi nomor tampilan (1-based) ke index (0-based)
+                            indices_to_drop = [df_display.index[n-1] for n in valid_nomor]
+                            
+                            # Hapus baris
+                            st.session_state.neraca_saldo = st.session_state.neraca_saldo.drop(indices_to_drop).reset_index(drop=True)
+                            
+                            if len(st.session_state.neraca_saldo) == 0:
+                                st.session_state.neraca_saldo = pd.DataFrame([
+                                    {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
+                                ])
+                            
+                            st.session_state.neraca_refresh_counter += 1
+                            st.success(f"✅ {len(valid_nomor)} baris berhasil dihapus!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Nomor baris tidak valid!")
+                    except ValueError:
+                        st.error("❌ Format nomor baris salah! Gunakan format: 1,2,3")
+        
+        # Tampilkan preview data untuk referensi
+        st.write("**Preview Data (untuk referensi nomor baris):**")
+        preview_df = df_display.reset_index(drop=True)
+        preview_df.index = preview_df.index + 1  # Mulai dari 1
+        preview_df.index.name = "No"
+        
+        st.dataframe(
+            preview_df.style.format({
+                "Debit (Rp)": format_rupiah,
+                "Kredit (Rp)": format_rupiah,
+            }),
+            use_container_width=True
+        )
 
-    # Input data menggunakan AgGrid dengan key yang berubah
+    st.markdown("---")
+
+    # Input data menggunakan AgGrid
     aggrid_key = f"neraca_{st.session_state.neraca_refresh_counter}"
     
     gb = GridOptionsBuilder.from_dataframe(st.session_state.neraca_saldo)
@@ -361,11 +384,10 @@ with tab3:
     
     new_neraca = pd.DataFrame(grid_response["data"])
     
-    # Update session state jika ada perubahan
     if not new_neraca.equals(st.session_state.neraca_saldo):
         st.session_state.neraca_saldo = new_neraca.copy()
 
-    # Filter data yang valid (untuk tampilan hasil)
+    # Filter data yang valid
     df_neraca_clean = new_neraca[new_neraca["Nama Akun"].astype(str).str.strip() != ""]
 
     if not df_neraca_clean.empty:
@@ -392,7 +414,7 @@ with tab3:
             use_container_width=True
         )
 
-        # Fungsi PDF (sama seperti sebelumnya)
+        # Fungsi PDF
         def buat_pdf_neraca(df):
             pdf = FPDF()
             pdf.add_page()
