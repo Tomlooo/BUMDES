@@ -237,7 +237,7 @@ with tab2:
     st.info("Fitur ini sedang dalam pengembangan 🚧")
 
 # ========================================
-# TAB 3: NERACA SALDO (VERSI STABIL)
+# TAB 3: NERACA SALDO (FIX TOMBOL TAMBAH)
 # ========================================
 with tab3:
     st.header("⚖️ Neraca Saldo BUMDes")
@@ -247,10 +247,15 @@ with tab3:
     # Tombol kontrol
     col1, col2, col3, col4 = st.columns([1, 1, 1, 3])
     
+    # Counter untuk force refresh AgGrid
+    if "neraca_refresh_counter" not in st.session_state:
+        st.session_state.neraca_refresh_counter = 0
+    
     with col1:
         if st.button("➕ Tambah 1 Baris", key="tambah_neraca_1", use_container_width=True):
             new_row = pd.DataFrame([{"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
             st.session_state.neraca_saldo = pd.concat([st.session_state.neraca_saldo, new_row], ignore_index=True)
+            st.session_state.neraca_refresh_counter += 1  # Force refresh
             st.rerun()
     
     with col2:
@@ -263,6 +268,7 @@ with tab3:
                 {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
             ])
             st.session_state.neraca_saldo = pd.concat([st.session_state.neraca_saldo, new_rows], ignore_index=True)
+            st.session_state.neraca_refresh_counter += 1  # Force refresh
             st.rerun()
     
     with col3:
@@ -275,6 +281,7 @@ with tab3:
                 st.session_state.neraca_saldo = pd.DataFrame([
                     {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
                 ])
+            st.session_state.neraca_refresh_counter += 1  # Force refresh
             st.rerun()
 
     # Info jumlah baris
@@ -282,10 +289,35 @@ with tab3:
     filled_rows = len(st.session_state.neraca_saldo[st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""])
     st.caption(f"📊 Total Baris: {total_rows} | Terisi: {filled_rows} | Kosong: {total_rows - filled_rows}")
 
-    # Input data menggunakan AgGrid (TANPA AUTO-REFRESH)
-    new_neraca = create_aggrid(st.session_state.neraca_saldo, "neraca", height=400)
+    # Input data menggunakan AgGrid dengan key yang berubah
+    aggrid_key = f"neraca_{st.session_state.neraca_refresh_counter}"
     
-    # Update session state jika ada perubahan (TANPA RERUN OTOMATIS)
+    gb = GridOptionsBuilder.from_dataframe(st.session_state.neraca_saldo)
+    gb.configure_default_column(editable=True, resizable=True)
+    gb.configure_grid_options(stopEditingWhenCellsLoseFocus=False)
+    
+    for col in st.session_state.neraca_saldo.columns:
+        if "(Rp)" in col:
+            gb.configure_column(col, type=["numericColumn"], valueFormatter="value ? value.toLocaleString() : ''")
+    
+    grid_options = gb.build()
+    
+    grid_response = AgGrid(
+        st.session_state.neraca_saldo,
+        gridOptions=grid_options,
+        update_mode=GridUpdateMode.VALUE_CHANGED,
+        fit_columns_on_grid_load=True,
+        allow_unsafe_jscode=True,
+        enable_enterprise_modules=False,
+        theme="streamlit",
+        height=400,
+        key=aggrid_key,  # Key yang berubah setiap kali tombol diklik
+        reload_data=True
+    )
+    
+    new_neraca = pd.DataFrame(grid_response["data"])
+    
+    # Update session state jika ada perubahan
     if not new_neraca.equals(st.session_state.neraca_saldo):
         st.session_state.neraca_saldo = new_neraca.copy()
 
