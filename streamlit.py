@@ -237,23 +237,36 @@ with tab2:
     st.info("Fitur ini sedang dalam pengembangan 🚧")
 
 # ========================================
-# TAB 3: NERACA SALDO (PERBAIKAN DINAMIS)
+# TAB 3: NERACA SALDO (VERSI STABIL)
 # ========================================
 with tab3:
     st.header("⚖️ Neraca Saldo BUMDes")
     st.subheader("Periode: Januari 2025")
-    st.info("💡 Masukkan data saldo akhir dari setiap akun di Buku Besar")
+    st.info("💡 Masukkan data saldo akhir dari setiap akun di Buku Besar. Klik 'Tambah Baris' untuk menambah data baru.")
 
-    # Tombol untuk menambah baris baru
-    col1, col2, col3 = st.columns([1, 1, 4])
+    # Tombol kontrol
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 3])
+    
     with col1:
-        if st.button("➕ Tambah Baris", key="tambah_neraca", use_container_width=True):
+        if st.button("➕ Tambah 1 Baris", key="tambah_neraca_1", use_container_width=True):
             new_row = pd.DataFrame([{"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
             st.session_state.neraca_saldo = pd.concat([st.session_state.neraca_saldo, new_row], ignore_index=True)
             st.rerun()
     
     with col2:
-        if st.button("🗑️ Hapus Baris Kosong", key="hapus_neraca", use_container_width=True):
+        if st.button("➕➕ Tambah 5 Baris", key="tambah_neraca_5", use_container_width=True):
+            new_rows = pd.DataFrame([
+                {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
+                {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
+                {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
+                {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
+                {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
+            ])
+            st.session_state.neraca_saldo = pd.concat([st.session_state.neraca_saldo, new_rows], ignore_index=True)
+            st.rerun()
+    
+    with col3:
+        if st.button("🗑️ Hapus Kosong", key="hapus_neraca", use_container_width=True):
             st.session_state.neraca_saldo = st.session_state.neraca_saldo[
                 st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""
             ].reset_index(drop=True)
@@ -264,31 +277,17 @@ with tab3:
                 ])
             st.rerun()
 
-    # PERBAIKAN: Auto-add baris kosong jika semua baris sudah terisi
-    df_current = st.session_state.neraca_saldo.copy()
-    
-    # Cek apakah baris terakhir sudah terisi
-    if len(df_current) > 0:
-        last_row = df_current.iloc[-1]
-        if str(last_row["Nama Akun"]).strip() != "":
-            # Jika baris terakhir sudah terisi, tambahkan baris kosong baru
-            new_row = pd.DataFrame([{"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
-            df_current = pd.concat([df_current, new_row], ignore_index=True)
-            st.session_state.neraca_saldo = df_current.copy()
+    # Info jumlah baris
+    total_rows = len(st.session_state.neraca_saldo)
+    filled_rows = len(st.session_state.neraca_saldo[st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""])
+    st.caption(f"📊 Total Baris: {total_rows} | Terisi: {filled_rows} | Kosong: {total_rows - filled_rows}")
 
-    # Input data menggunakan AgGrid
+    # Input data menggunakan AgGrid (TANPA AUTO-REFRESH)
     new_neraca = create_aggrid(st.session_state.neraca_saldo, "neraca", height=400)
     
-    # Update session state jika ada perubahan
+    # Update session state jika ada perubahan (TANPA RERUN OTOMATIS)
     if not new_neraca.equals(st.session_state.neraca_saldo):
         st.session_state.neraca_saldo = new_neraca.copy()
-        
-        # Auto-refresh untuk menambah baris kosong jika perlu
-        df_check = new_neraca.copy()
-        if len(df_check) > 0:
-            last_row = df_check.iloc[-1]
-            if str(last_row["Nama Akun"]).strip() != "":
-                st.rerun()
 
     # Filter data yang valid (untuk tampilan hasil)
     df_neraca_clean = new_neraca[new_neraca["Nama Akun"].astype(str).str.strip() != ""]
@@ -317,7 +316,7 @@ with tab3:
             use_container_width=True
         )
 
-        # Fungsi PDF yang sudah diperbaiki
+        # Fungsi PDF
         def buat_pdf_neraca(df):
             pdf = FPDF()
             pdf.add_page()
@@ -383,7 +382,8 @@ with tab3:
             use_container_width=True
         )
     else:
-        st.warning("Belum ada data valid di tabel Neraca Saldo.")
+        st.warning("⚠️ Belum ada data valid di tabel Neraca Saldo.")
+
 # ========================================
 # TAB 4: LAPORAN KEUANGAN (SESUAI SCREENSHOT)
 # ========================================
