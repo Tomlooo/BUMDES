@@ -237,14 +237,14 @@ with tab2:
     st.info("Fitur ini sedang dalam pengembangan 🚧")
 
 # ========================================
-# TAB 3: NERACA SALDO (PERBAIKAN TOMBOL)
+# TAB 3: NERACA SALDO
 # ========================================
 with tab3:
     st.header("⚖️ Neraca Saldo BUMDes")
     st.subheader("Periode: Januari 2025")
     st.info("💡 Masukkan data saldo akhir dari setiap akun di Buku Besar")
 
-    # Tombol untuk menambah baris baru - PERBAIKAN!
+    # Tombol untuk menambah baris baru
     col1, col2, col3 = st.columns([1, 1, 4])
     with col1:
         if st.button("➕ Tambah Baris", key="tambah_neraca", use_container_width=True):
@@ -297,28 +297,57 @@ with tab3:
             use_container_width=True
         )
 
+        # Fungsi PDF yang sudah diperbaiki
         def buat_pdf_neraca(df):
             pdf = FPDF()
             pdf.add_page()
-            pdf.set_font("Arial", size=12)
-            pdf.cell(200, 10, txt="Neraca Saldo BUMDes", ln=True, align="C")
-            pdf.cell(200, 10, txt="Periode: Januari 2025", ln=True, align="C")
-            pdf.ln(8)
+            
+            # Header
+            pdf.set_font("Arial", 'B', 14)
+            pdf.cell(0, 10, txt="Neraca Saldo BUMDes", ln=True, align="C")
+            pdf.set_font("Arial", '', 12)
+            pdf.cell(0, 8, txt="Periode: Januari 2025", ln=True, align="C")
+            pdf.ln(5)
 
-            col_width = 190 / 4
+            # Table Header
+            pdf.set_font("Arial", 'B', 10)
+            col_widths = [15, 25, 70, 40, 40]
             headers = ["No", "No Akun", "Nama Akun", "Debit (Rp)", "Kredit (Rp)"]
-            for col in headers:
-                pdf.cell(col_width if col != "No" else 15, 10, col, border=1, align="C")
+            
+            for i, header in enumerate(headers):
+                pdf.cell(col_widths[i], 10, header, border=1, align="C")
             pdf.ln()
 
-            pdf.set_font("Arial", size=10)
+            # Table Content
+            pdf.set_font("Arial", '', 9)
             for idx, row in df.iterrows():
-                pdf.cell(15, 8, str(idx), border=1, align="C")
-                pdf.cell(col_width, 8, str(row["No Akun"]), border=1, align="C")
-                pdf.cell(col_width, 8, str(row["Nama Akun"]), border=1, align="C")
-                pdf.cell(col_width, 8, format_rupiah(row["Debit (Rp)"]) if isinstance(row["Debit (Rp)"], (int, float)) else str(row["Debit (Rp)"]), border=1, align="R")
-                pdf.cell(col_width, 8, format_rupiah(row["Kredit (Rp)"]) if isinstance(row["Kredit (Rp)"], (int, float)) else str(row["Kredit (Rp)"]), border=1, align="R")
+                pdf.cell(col_widths[0], 8, str(idx), border=1, align="C")
+                pdf.cell(col_widths[1], 8, str(row["No Akun"]), border=1, align="C")
+                
+                nama_akun = str(row["Nama Akun"])
+                if len(nama_akun) > 35:
+                    nama_akun = nama_akun[:32] + "..."
+                pdf.cell(col_widths[2], 8, nama_akun, border=1, align="L")
+                
+                debit_val = row["Debit (Rp)"]
+                if isinstance(debit_val, (int, float)) and debit_val != 0:
+                    debit_text = format_rupiah(debit_val)
+                else:
+                    debit_text = "-"
+                pdf.cell(col_widths[3], 8, debit_text, border=1, align="R")
+                
+                kredit_val = row["Kredit (Rp)"]
+                if isinstance(kredit_val, (int, float)) and kredit_val != 0:
+                    kredit_text = format_rupiah(kredit_val)
+                else:
+                    kredit_text = "-"
+                pdf.cell(col_widths[4], 8, kredit_text, border=1, align="R")
+                
                 pdf.ln()
+
+            pdf.ln(5)
+            pdf.set_font("Arial", 'I', 8)
+            pdf.cell(0, 5, txt="Dicetak dari Sistem Akuntansi BUMDes", ln=True, align="C")
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                 pdf.output(tmp.name)
@@ -335,7 +364,6 @@ with tab3:
         )
     else:
         st.warning("Belum ada data valid di tabel Neraca Saldo.")
-
 # ========================================
 # TAB 4: LAPORAN KEUANGAN (SESUAI SCREENSHOT)
 # ========================================
