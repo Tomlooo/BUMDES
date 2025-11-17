@@ -237,7 +237,7 @@ with tab2:
     st.info("Fitur ini sedang dalam pengembangan 🚧")
 
 # ========================================
-# TAB 3: NERACA SALDO
+# TAB 3: NERACA SALDO (PERBAIKAN DINAMIS)
 # ========================================
 with tab3:
     st.header("⚖️ Neraca Saldo BUMDes")
@@ -264,13 +264,33 @@ with tab3:
                 ])
             st.rerun()
 
+    # PERBAIKAN: Auto-add baris kosong jika semua baris sudah terisi
+    df_current = st.session_state.neraca_saldo.copy()
+    
+    # Cek apakah baris terakhir sudah terisi
+    if len(df_current) > 0:
+        last_row = df_current.iloc[-1]
+        if str(last_row["Nama Akun"]).strip() != "":
+            # Jika baris terakhir sudah terisi, tambahkan baris kosong baru
+            new_row = pd.DataFrame([{"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
+            df_current = pd.concat([df_current, new_row], ignore_index=True)
+            st.session_state.neraca_saldo = df_current.copy()
+
     # Input data menggunakan AgGrid
     new_neraca = create_aggrid(st.session_state.neraca_saldo, "neraca", height=400)
     
+    # Update session state jika ada perubahan
     if not new_neraca.equals(st.session_state.neraca_saldo):
         st.session_state.neraca_saldo = new_neraca.copy()
+        
+        # Auto-refresh untuk menambah baris kosong jika perlu
+        df_check = new_neraca.copy()
+        if len(df_check) > 0:
+            last_row = df_check.iloc[-1]
+            if str(last_row["Nama Akun"]).strip() != "":
+                st.rerun()
 
-    # Filter data yang valid
+    # Filter data yang valid (untuk tampilan hasil)
     df_neraca_clean = new_neraca[new_neraca["Nama Akun"].astype(str).str.strip() != ""]
 
     if not df_neraca_clean.empty:
