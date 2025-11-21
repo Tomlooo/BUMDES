@@ -537,7 +537,7 @@ with tab3:
     else:
         st.warning("⚠️ Belum ada data valid di tabel Neraca Saldo.")
 # ========================================
-# TAB 4: LAPORAN KEUANGAN (FIXED LABA_BERSIH SCOPE)
+# TAB 4: LAPORAN KEUANGAN
 # ========================================
 with tab4:
     st.header("📊 Laporan Keuangan BUMDes")
@@ -599,8 +599,8 @@ with tab4:
         ]
         
         # Clear data lama
-        st.session_state.pendapatan = pd.DataFrame([{"Jenis Pendapatan": "", "Jumlah (Rp)": 0}])
-        st.session_state.beban = pd.DataFrame([{"Jenis Beban": "", "Jumlah (Rp)": 0}])
+        st.session_state.pendapatan = pd.DataFrame([{"Jenis Pendapatan": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
+        st.session_state.beban = pd.DataFrame([{"Jenis Beban": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
         st.session_state.aktiva_lancar = pd.DataFrame([{"Item": "", "Jumlah (Rp)": 0}])
         st.session_state.aktiva_tetap = pd.DataFrame([{"Item": "", "Jumlah (Rp)": 0}])
         st.session_state.kewajiban = pd.DataFrame([{"Item": "", "Jumlah (Rp)": 0}])
@@ -613,11 +613,11 @@ with tab4:
             kredit = row["Kredit (Rp)"] if pd.notna(row["Kredit (Rp)"]) else 0
             
             if "pendapatan" in nama_akun or "penjualan" in nama_akun:
-                new_row = pd.DataFrame([{"Jenis Pendapatan": row["Akun"], "Jumlah (Rp)": kredit}])
+                new_row = pd.DataFrame([{"Jenis Pendapatan": row["Akun"], "Debit (Rp)": 0, "Kredit (Rp)": kredit}])
                 st.session_state.pendapatan = pd.concat([st.session_state.pendapatan, new_row], ignore_index=True)
             
             elif "beban" in nama_akun or "biaya" in nama_akun:
-                new_row = pd.DataFrame([{"Jenis Beban": row["Akun"], "Jumlah (Rp)": debit}])
+                new_row = pd.DataFrame([{"Jenis Beban": row["Akun"], "Debit (Rp)": debit, "Kredit (Rp)": 0}])
                 st.session_state.beban = pd.concat([st.session_state.beban, new_row], ignore_index=True)
             
             elif "kas" in nama_akun or "perlengkapan" in nama_akun or "piutang" in nama_akun:
@@ -644,13 +644,221 @@ with tab4:
         "💸 Arus Kas"
     ])
     
-                    pdf.ln(5)
+    # ========================================
+    # SUB-TAB 1: LAPORAN LABA/RUGI
+    # ========================================
+    with subtab1:
+        st.markdown("### 📈 Laporan Laba/Rugi")
+        st.markdown(f"**BUMDes - {bulan_dict[bulan_laporan]} {tahun_laporan}**")
+        st.markdown("---")
+        
+        # Tombol reload
+        if st.button("🔄 Reload dari Neraca Saldo", key="reload_labarugi"):
+            st.session_state.pendapatan_loaded = False
+            st.session_state.laporan_refresh += 1
+            st.rerun()
+        
+        # Input Hybrid
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write("#### Input Pendapatan (Kredit):")
+            
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.button("➕ Tambah", key="tambah_pendapatan", use_container_width=True):
+                    new_row = pd.DataFrame([{"Jenis Pendapatan": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
+                    st.session_state.pendapatan = pd.concat([st.session_state.pendapatan, new_row], ignore_index=True)
+                    st.session_state.laporan_refresh += 1
+                    st.rerun()
+            
+            with col_btn2:
+                if st.button("🗑️ Hapus Kosong", key="hapus_pendapatan_kosong", use_container_width=True):
+                    st.session_state.pendapatan = st.session_state.pendapatan[
+                        st.session_state.pendapatan["Jenis Pendapatan"].astype(str).str.strip() != ""
+                    ].reset_index(drop=True)
+                    if len(st.session_state.pendapatan) == 0:
+                        st.session_state.pendapatan = pd.DataFrame([{"Jenis Pendapatan": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
+                    st.session_state.laporan_refresh += 1
+                    st.rerun()
+            
+            new_pendapatan = create_aggrid(st.session_state.pendapatan, f"pendapatan_{st.session_state.laporan_refresh}", height=250)
+            if not new_pendapatan.equals(st.session_state.pendapatan):
+                st.session_state.pendapatan = new_pendapatan.copy()
+            
+            # Hapus Tertentu
+            df_pend_terisi = st.session_state.pendapatan[
+                st.session_state.pendapatan["Jenis Pendapatan"].astype(str).str.strip() != ""
+            ]
+            
+            if len(df_pend_terisi) > 0:
+                with st.expander("🗑️ Hapus Pendapatan Tertentu", expanded=False):
+                    rows_del = []
+                    for idx in df_pend_terisi.index:
+                        row = df_pend_terisi.loc[idx]
+                        col_chk, col_txt = st.columns([1, 9])
+                        with col_chk:
+                            if st.checkbox("", key=f"chk_p_{idx}_{st.session_state.laporan_refresh}"):
+                                rows_del.append(idx)
+                        with col_txt:
+                            st.text(f"{row['Jenis Pendapatan']}: D: {format_rupiah(row['Debit (Rp)'])} | K: {format_rupiah(row['Kredit (Rp)'])}")
+                    
+                    if rows_del and st.button(f"🗑️ Hapus {len(rows_del)} Item", key="del_pend"):
+                        st.session_state.pendapatan = st.session_state.pendapatan.drop(rows_del).reset_index(drop=True)
+                        if len(st.session_state.pendapatan) == 0:
+                            st.session_state.pendapatan = pd.DataFrame([{"Jenis Pendapatan": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
+                        st.session_state.laporan_refresh += 1
+                        st.rerun()
+
+        with col2:
+            st.write("#### Input Beban-Beban (Debit):")
+            
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.button("➕ Tambah", key="tambah_beban", use_container_width=True):
+                    new_row = pd.DataFrame([{"Jenis Beban": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
+                    st.session_state.beban = pd.concat([st.session_state.beban, new_row], ignore_index=True)
+                    st.session_state.laporan_refresh += 1
+                    st.rerun()
+            
+            with col_btn2:
+                if st.button("🗑️ Hapus Kosong", key="hapus_beban_kosong", use_container_width=True):
+                    st.session_state.beban = st.session_state.beban[
+                        st.session_state.beban["Jenis Beban"].astype(str).str.strip() != ""
+                    ].reset_index(drop=True)
+                    if len(st.session_state.beban) == 0:
+                        st.session_state.beban = pd.DataFrame([{"Jenis Beban": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
+                    st.session_state.laporan_refresh += 1
+                    st.rerun()
+            
+            new_beban = create_aggrid(st.session_state.beban, f"beban_{st.session_state.laporan_refresh}", height=250)
+            if not new_beban.equals(st.session_state.beban):
+                st.session_state.beban = new_beban.copy()
+            
+            # Hapus Tertentu
+            df_beban_terisi = st.session_state.beban[
+                st.session_state.beban["Jenis Beban"].astype(str).str.strip() != ""
+            ]
+            
+            if len(df_beban_terisi) > 0:
+                with st.expander("🗑️ Hapus Beban Tertentu", expanded=False):
+                    rows_del = []
+                    for idx in df_beban_terisi.index:
+                        row = df_beban_terisi.loc[idx]
+                        col_chk, col_txt = st.columns([1, 9])
+                        with col_chk:
+                            if st.checkbox("", key=f"chk_b_{idx}_{st.session_state.laporan_refresh}"):
+                                rows_del.append(idx)
+                        with col_txt:
+                            st.text(f"{row['Jenis Beban']}: D: {format_rupiah(row['Debit (Rp)'])} | K: {format_rupiah(row['Kredit (Rp)'])}")
+                    
+                    if rows_del and st.button(f"🗑️ Hapus {len(rows_del)} Item", key="del_beban"):
+                        st.session_state.beban = st.session_state.beban.drop(rows_del).reset_index(drop=True)
+                        if len(st.session_state.beban) == 0:
+                            st.session_state.beban = pd.DataFrame([{"Jenis Beban": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
+                        st.session_state.laporan_refresh += 1
+                        st.rerun()
+
+        st.markdown("---")
+
+        # Hitung dan SIMPAN laba_bersih di session_state
+        df_pendapatan_clean = new_pendapatan[new_pendapatan["Jenis Pendapatan"].astype(str).str.strip() != ""]
+        df_beban_clean = new_beban[new_beban["Jenis Beban"].astype(str).str.strip() != ""]
+
+        # Pendapatan = Kredit, Beban = Debit
+        total_pendapatan = df_pendapatan_clean["Kredit (Rp)"].sum() if not df_pendapatan_clean.empty else 0
+        total_beban = df_beban_clean["Debit (Rp)"].sum() if not df_beban_clean.empty else 0
+        
+        # SIMPAN di session_state agar bisa diakses sub-tab lain!
+        st.session_state.laba_bersih = total_pendapatan - total_beban
+
+        if not df_pendapatan_clean.empty or not df_beban_clean.empty:
+            st.write("### 📊 Hasil Laporan Laba/Rugi")
+            
+            result_data = []
+            result_data.append({"Keterangan": "Pendapatan:", "Debit": "", "Kredit": ""})
+            
+            for idx, row in df_pendapatan_clean.iterrows():
+                result_data.append({
+                    "Keterangan": f"  {idx+1}. {row['Jenis Pendapatan']}", 
+                    "Debit": row["Debit (Rp)"] if row["Debit (Rp)"] != 0 else "",
+                    "Kredit": row["Kredit (Rp)"]
+                })
+            
+            result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
+            result_data.append({"Keterangan": "Total Pendapatan", "Debit": "", "Kredit": total_pendapatan})
+            result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
+            result_data.append({"Keterangan": "Beban-Beban:", "Debit": "", "Kredit": ""})
+            
+            for idx, row in df_beban_clean.iterrows():
+                result_data.append({
+                    "Keterangan": f"  {idx+1}. {row['Jenis Beban']}", 
+                    "Debit": row["Debit (Rp)"],
+                    "Kredit": row["Kredit (Rp)"] if row["Kredit (Rp)"] != 0 else ""
+                })
+            
+            result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
+            result_data.append({"Keterangan": "Total Beban", "Debit": total_beban, "Kredit": ""})
+            result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
+            
+            # Laba Bersih = Kredit - Debit
+            if st.session_state.laba_bersih >= 0:
+                result_data.append({"Keterangan": "Laba Bersih", "Debit": "", "Kredit": st.session_state.laba_bersih})
+            else:
+                result_data.append({"Keterangan": "Rugi Bersih", "Debit": abs(st.session_state.laba_bersih), "Kredit": ""})
+
+            df_labarugi = pd.DataFrame(result_data)
+            
+            st.dataframe(
+                df_labarugi.style.format({
+                    "Debit": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x,
+                    "Kredit": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x
+                })
+                .apply(lambda x: ['font-weight: bold' if i < len(df_labarugi) and ('Total' in str(df_labarugi.iloc[i]['Keterangan']) or 'Laba' in str(df_labarugi.iloc[i]['Keterangan']) or 'Rugi' in str(df_labarugi.iloc[i]['Keterangan'])) else '' for i in range(len(x))], axis=0)
+                .set_properties(**{'text-align': 'left'}, subset=['Keterangan'])
+                .set_properties(**{'text-align': 'right'}, subset=['Debit', 'Kredit']),
+                use_container_width=True,
+                hide_index=True
+            )
+            
+            # PDF Export
+            def buat_pdf_labarugi(df, bulan, tahun):
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", 'B', 14)
+                pdf.cell(0, 10, txt="Laporan Laba/Rugi", ln=True, align="C")
+                pdf.set_font("Arial", '', 12)
+                pdf.cell(0, 8, txt="BUMDes", ln=True, align="C")
+                pdf.cell(0, 8, txt=f"Periode: {bulan_dict[bulan]} {tahun}", ln=True, align="C")
+                pdf.ln(5)
+                pdf.set_font("Arial", 'B', 10)
+                pdf.cell(90, 10, "Keterangan", border=1, align="C")
+                pdf.cell(45, 10, "Debit (Rp)", border=1, align="C")
+                pdf.cell(45, 10, "Kredit (Rp)", border=1, align="C")
+                pdf.ln()
+                pdf.set_font("Arial", '', 9)
+                for idx in range(len(df)):
+                    row = df.iloc[idx]
+                    is_bold = 'Total' in str(row['Keterangan']) or 'Laba' in str(row['Keterangan']) or 'Rugi' in str(row['Keterangan'])
+                    if is_bold:
+                        pdf.set_font("Arial", 'B', 9)
+                    ket = str(row["Keterangan"])[:40] + "..." if len(str(row["Keterangan"])) > 43 else str(row["Keterangan"])
+                    pdf.cell(90, 8, ket, border=1, align="L")
+                    debit_text = format_rupiah(row["Debit"]) if isinstance(row["Debit"], (int, float)) else ""
+                    pdf.cell(45, 8, debit_text, border=1, align="R")
+                    kredit_text = format_rupiah(row["Kredit"]) if isinstance(row["Kredit"], (int, float)) else ""
+                    pdf.cell(45, 8, kredit_text, border=1, align="R")
+                    pdf.ln()
+                    if is_bold:
+                        pdf.set_font("Arial", '', 9)
+                pdf.ln(5)
                 pdf.set_font("Arial", 'I', 8)
                 pdf.cell(0, 5, txt="Dicetak dari Sistem Akuntansi BUMDes", ln=True, align="C")
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                     pdf.output(tmp.name)
                     tmp.seek(0)
                     return tmp.read()
+
             pdf_labarugi = buat_pdf_labarugi(df_labarugi, bulan_laporan, tahun_laporan)
             st.download_button(
                 "📥 Download PDF Laba/Rugi",
@@ -661,7 +869,7 @@ with tab4:
             )
     
     # ========================================
-    # SUB-TAB 2: LAPORAN NERACA (SEKARANG BISA AKSES LABA_BERSIH!)
+    # SUB-TAB 2: LAPORAN NERACA
     # ========================================
     with subtab2:
         st.markdown("### 🏦 Laporan Neraca")
@@ -838,7 +1046,7 @@ with tab4:
         
         total_kewajiban = df_kewajiban_clean["Jumlah (Rp)"].sum() if not df_kewajiban_clean.empty else 0
         
-        # GUNAKAN laba_bersih dari session_state (TIDAK ERROR LAGI!)
+        # GUNAKAN laba_bersih dari session_state
         modal_akhir = modal_awal + st.session_state.laba_bersih
         total_passiva = total_kewajiban + modal_akhir
         
@@ -898,7 +1106,7 @@ with tab4:
             hide_index=True
         )
         
-        # PDF Export (tanpa validasi balance)
+        # PDF Export
         def buat_pdf_neraca_lap(df, bulan, tahun):
             pdf = FPDF()
             pdf.add_page()
@@ -944,7 +1152,7 @@ with tab4:
         )
     
     # ========================================
-    # SUB-TAB 3: ARUS KAS (DENGAN HAPUS TERTENTU)
+    # SUB-TAB 3: ARUS KAS
     # ========================================
     with subtab3:
         st.markdown("### 💸 Laporan Arus Kas")
@@ -1144,11 +1352,3 @@ with tab4:
                     return tmp.read()
             
             st.download_button("📥 Download PDF Arus Kas", buat_pdf_ak(df_ak, bulan_laporan, tahun_laporan), f"arus_kas_{bulan_laporan}_{tahun_laporan}.pdf", "application/pdf", use_container_width=True)
-
-        with col2:
-            st.write("#### Investasi:")
-            # (sama seperti Operasi, copy pattern di atas)
-
-        with col3:
-            st.write("#### Pendanaan:")
-            # (sama seperti Operasi, copy pattern di atas)
