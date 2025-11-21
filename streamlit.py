@@ -237,12 +237,12 @@ with tab2:
     st.info("Fitur ini sedang dalam pengembangan 🚧")
 
 # ========================================
-# TAB 3: NERACA SALDO
+# TAB 3: NERACA SALDO (FULL CODE - NO ERROR)
 # ========================================
 with tab3:
     st.header("💵 Neraca Saldo BUMDes")
     
-    # --- Selector Periode (seperti Jurnal Umum) ---
+    # --- Selector Periode ---
     col1, col2 = st.columns(2)
     
     bulan_dict = {
@@ -282,15 +282,6 @@ with tab3:
     # Counter untuk force refresh
     if "neraca_refresh_counter" not in st.session_state:
         st.session_state.neraca_refresh_counter = 0
-    
-    # --- Ambil daftar akun dari Buku Besar (dengan cek keberadaan) ---
-    daftar_akun = [""]  # Default kosong
-    
-    # Cek apakah buku_besar ada dan tidak kosong
-    if "buku_besar" in st.session_state and st.session_state.buku_besar:
-        for akun_no, akun_data in st.session_state.buku_besar.items():
-            if "nama_akun" in akun_data:
-                daftar_akun.append(akun_data["nama_akun"])
     
     # Tombol kontrol
     col1, col2, col3 = st.columns(3)
@@ -368,13 +359,33 @@ with tab3:
 
     st.markdown("---")
 
-    # --- AgGrid Table ---
+    # --- AgGrid dengan Dropdown Nama Akun ---
     aggrid_key = f"neraca_{st.session_state.neraca_refresh_counter}"
     
+    # Ambil daftar akun dari Buku Besar (SAFE CHECK)
+    daftar_akun_values = [""]
+    
+    if "buku_besar" in st.session_state and isinstance(st.session_state.buku_besar, dict):
+        for akun_no, akun_data in st.session_state.buku_besar.items():
+            if isinstance(akun_data, dict) and "nama_akun" in akun_data:
+                daftar_akun_values.append(akun_data["nama_akun"])
+    
+    # Build GridOptions
     gb = GridOptionsBuilder.from_dataframe(st.session_state.neraca_saldo)
     gb.configure_default_column(editable=True, resizable=True)
     gb.configure_grid_options(stopEditingWhenCellsLoseFocus=False)
     
+    # Konfigurasi dropdown untuk Nama Akun
+    gb.configure_column(
+        "Nama Akun",
+        editable=True,
+        cellEditor="agSelectCellEditor",
+        cellEditorParams={
+            "values": daftar_akun_values
+        }
+    )
+    
+    # Konfigurasi kolom angka
     for col in st.session_state.neraca_saldo.columns:
         if "(Rp)" in col:
             gb.configure_column(col, type=["numericColumn"], valueFormatter="value ? value.toLocaleString() : ''")
@@ -425,7 +436,7 @@ with tab3:
             use_container_width=True
         )
 
-        # PDF Export
+        # PDF Export dengan periode dinamis
         def buat_pdf_neraca(df, bulan, tahun):
             pdf = FPDF()
             pdf.add_page()
