@@ -593,7 +593,7 @@ with tab4:
     
     if not st.session_state.pendapatan_loaded:
         df_neraca = st.session_state.neraca_saldo[
-            st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""
+            st.session_state.neraca_saldo["Akun"].astype(str).str.strip() != ""
         ]
         
         # Clear data lama
@@ -606,31 +606,31 @@ with tab4:
         
         # Auto-populate dari Neraca Saldo
         for _, row in df_neraca.iterrows():
-            nama_akun = str(row["Nama Akun"]).lower()
+            nama_akun = str(row["Akun"]).lower()
             debit = row["Debit (Rp)"] if pd.notna(row["Debit (Rp)"]) else 0
             kredit = row["Kredit (Rp)"] if pd.notna(row["Kredit (Rp)"]) else 0
             
             if "pendapatan" in nama_akun or "penjualan" in nama_akun:
-                new_row = pd.DataFrame([{"Jenis Pendapatan": row["Nama Akun"], "Jumlah (Rp)": kredit}])
+                new_row = pd.DataFrame([{"Jenis Pendapatan": row["Akun"], "Jumlah (Rp)": kredit}])
                 st.session_state.pendapatan = pd.concat([st.session_state.pendapatan, new_row], ignore_index=True)
             
             elif "beban" in nama_akun or "biaya" in nama_akun:
-                new_row = pd.DataFrame([{"Jenis Beban": row["Nama Akun"], "Jumlah (Rp)": debit}])
+                new_row = pd.DataFrame([{"Jenis Beban": row["Akun"], "Jumlah (Rp)": debit}])
                 st.session_state.beban = pd.concat([st.session_state.beban, new_row], ignore_index=True)
             
             elif "kas" in nama_akun or "perlengkapan" in nama_akun or "piutang" in nama_akun:
-                new_row = pd.DataFrame([{"Item": row["Nama Akun"], "Jumlah (Rp)": debit}])
+                new_row = pd.DataFrame([{"Item": row["Akun"], "Jumlah (Rp)": debit}])
                 st.session_state.aktiva_lancar = pd.concat([st.session_state.aktiva_lancar, new_row], ignore_index=True)
             
             elif "peralatan" in nama_akun or "gedung" in nama_akun or "kendaraan" in nama_akun:
-                new_row = pd.DataFrame([{"Item": row["Nama Akun"], "Jumlah (Rp)": debit}])
+                new_row = pd.DataFrame([{"Item": row["Akun"], "Jumlah (Rp)": debit}])
                 st.session_state.aktiva_tetap = pd.concat([st.session_state.aktiva_tetap, new_row], ignore_index=True)
             
             elif "modal" in nama_akun:
                 st.session_state.modal_data["modal_awal"] = kredit
             
             elif "hutang" in nama_akun or "utang" in nama_akun:
-                new_row = pd.DataFrame([{"Item": row["Nama Akun"], "Jumlah (Rp)": kredit}])
+                new_row = pd.DataFrame([{"Item": row["Akun"], "Jumlah (Rp)": kredit}])
                 st.session_state.kewajiban = pd.concat([st.session_state.kewajiban, new_row], ignore_index=True)
         
         st.session_state.pendapatan_loaded = True
