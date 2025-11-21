@@ -16,7 +16,7 @@ if "data" not in st.session_state:
 
 if "neraca_saldo" not in st.session_state:
     st.session_state.neraca_saldo = pd.DataFrame([
-        {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
+        {"Ref": "", "Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}  # ← UBAH INI!
     ])
 
 if "pendapatan" not in st.session_state:
@@ -237,7 +237,7 @@ with tab2:
     st.info("Fitur ini sedang dalam pengembangan 🚧")
 
 # ========================================
-# TAB 3: NERACA SALDO (DENGAN DROPDOWN NAMA AKUN)
+# TAB 3: NERACA SALDO (REVISI LENGKAP)
 # ========================================
 with tab3:
     st.header("💵 Neraca Saldo BUMDes")
@@ -283,25 +283,53 @@ with tab3:
     if "neraca_refresh_counter" not in st.session_state:
         st.session_state.neraca_refresh_counter = 0
     
-    # --- Ambil daftar akun dari Buku Besar (AMAN) ---
-    daftar_akun_values = []
-    
-    # Cek keberadaan buku_besar dengan aman
-    try:
-        if hasattr(st.session_state, 'buku_besar') and st.session_state.buku_besar:
+    # --- FITUR BARU: Auto-populate dari Buku Besar ---
+    if st.button("🔄 Ambil Data dari Buku Besar", key="load_from_bukubesar"):
+        if "buku_besar" in st.session_state and st.session_state.buku_besar:
+            # Clear data lama (tanpa menghapus data yang sudah di-edit manual)
+            # Hanya tambahkan akun yang belum ada
+            
+            existing_akun = set(st.session_state.neraca_saldo["Akun"].astype(str).str.strip().tolist())
+            
             for akun_no, akun_data in st.session_state.buku_besar.items():
-                if isinstance(akun_data, dict) and "nama_akun" in akun_data:
-                    daftar_akun_values.append(akun_data["nama_akun"])
-    except AttributeError:
-        # Jika buku_besar belum ada, buat kosong
-        st.session_state.buku_besar = {}
+                nama_akun = akun_data.get("nama_akun", f"Akun {akun_no}")
+                
+                # Hanya tambahkan jika akun belum ada
+                if nama_akun not in existing_akun:
+                    saldo_debit = akun_data.get("debit", 0)
+                    saldo_kredit = akun_data.get("kredit", 0)
+                    
+                    # Tentukan posisi (Debit atau Kredit)
+                    # Aset dan Beban di Debit, Modal dan Pendapatan di Kredit
+                    if saldo_debit > saldo_kredit:
+                        new_row = pd.DataFrame([{
+                            "Ref": akun_no,
+                            "Akun": nama_akun,
+                            "Debit (Rp)": saldo_debit - saldo_kredit,
+                            "Kredit (Rp)": 0
+                        }])
+                    else:
+                        new_row = pd.DataFrame([{
+                            "Ref": akun_no,
+                            "Akun": nama_akun,
+                            "Debit (Rp)": 0,
+                            "Kredit (Rp)": saldo_kredit - saldo_debit
+                        }])
+                    
+                    st.session_state.neraca_saldo = pd.concat([st.session_state.neraca_saldo, new_row], ignore_index=True)
+            
+            st.session_state.neraca_refresh_counter += 1
+            st.success("✅ Data berhasil diambil dari Buku Besar!")
+            st.rerun()
+        else:
+            st.warning("⚠️ Belum ada data di Buku Besar. Silakan isi Jurnal Umum dan cek Buku Besar terlebih dahulu.")
     
     # Tombol kontrol
     col1, col2, col3 = st.columns(3)
     
     with col1:
         if st.button("➕ Tambah 1 Baris", key="tambah_neraca_1", use_container_width=True):
-            new_row = pd.DataFrame([{"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
+            new_row = pd.DataFrame([{"Ref": "", "Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}])
             st.session_state.neraca_saldo = pd.concat([st.session_state.neraca_saldo, new_row], ignore_index=True)
             st.session_state.neraca_refresh_counter += 1
             st.rerun()
@@ -309,11 +337,11 @@ with tab3:
     with col2:
         if st.button("➕➕ Tambah 5 Baris", key="tambah_neraca_5", use_container_width=True):
             new_rows = pd.DataFrame([
-                {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
-                {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
-                {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
-                {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
-                {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
+                {"Ref": "", "Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
+                {"Ref": "", "Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
+                {"Ref": "", "Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
+                {"Ref": "", "Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0},
+                {"Ref": "", "Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
             ])
             st.session_state.neraca_saldo = pd.concat([st.session_state.neraca_saldo, new_rows], ignore_index=True)
             st.session_state.neraca_refresh_counter += 1
@@ -322,23 +350,23 @@ with tab3:
     with col3:
         if st.button("🗑️ Hapus Kosong", key="hapus_neraca_kosong", use_container_width=True):
             st.session_state.neraca_saldo = st.session_state.neraca_saldo[
-                st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""
+                st.session_state.neraca_saldo["Akun"].astype(str).str.strip() != ""
             ].reset_index(drop=True)
             
             if len(st.session_state.neraca_saldo) == 0:
                 st.session_state.neraca_saldo = pd.DataFrame([
-                    {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
+                    {"Ref": "", "Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
                 ])
             st.session_state.neraca_refresh_counter += 1
             st.rerun()
 
     # Info counter
     total_rows = len(st.session_state.neraca_saldo)
-    filled_rows = len(st.session_state.neraca_saldo[st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""])
+    filled_rows = len(st.session_state.neraca_saldo[st.session_state.neraca_saldo["Akun"].astype(str).str.strip() != ""])
     st.caption(f"📊 Total Baris: {total_rows} | Terisi: {filled_rows} | Kosong: {total_rows - filled_rows}")
 
     # --- Sistem Penghapusan dengan Checkbox ---
-    df_terisi = st.session_state.neraca_saldo[st.session_state.neraca_saldo["Nama Akun"].astype(str).str.strip() != ""]
+    df_terisi = st.session_state.neraca_saldo[st.session_state.neraca_saldo["Akun"].astype(str).str.strip() != ""]
     
     if len(df_terisi) > 0:
         with st.expander("🗑️ Hapus Baris Tertentu", expanded=False):
@@ -355,7 +383,7 @@ with tab3:
                         rows_to_delete.append(idx)
                 
                 with col_info:
-                    st.text(f"No: {row['No Akun']} | {row['Nama Akun']} | Debit: {format_rupiah(row['Debit (Rp)'])} | Kredit: {format_rupiah(row['Kredit (Rp)'])}")
+                    st.text(f"Ref: {row['Ref']} | {row['Akun']} | Debit: {format_rupiah(row['Debit (Rp)'])} | Kredit: {format_rupiah(row['Kredit (Rp)'])}")
             
             if rows_to_delete:
                 if st.button(f"🗑️ Hapus {len(rows_to_delete)} Baris", key="confirm_delete", use_container_width=True):
@@ -363,7 +391,7 @@ with tab3:
                     
                     if len(st.session_state.neraca_saldo) == 0:
                         st.session_state.neraca_saldo = pd.DataFrame([
-                            {"No Akun": "", "Nama Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
+                            {"Ref": "", "Akun": "", "Debit (Rp)": 0, "Kredit (Rp)": 0}
                         ])
                     
                     st.session_state.neraca_refresh_counter += 1
@@ -372,17 +400,26 @@ with tab3:
 
     st.markdown("---")
 
-    # --- AgGrid dengan Dropdown Nama Akun ---
+    # --- AgGrid dengan Dropdown Akun dari Buku Besar ---
     aggrid_key = f"neraca_{st.session_state.neraca_refresh_counter}"
+    
+    # Ambil daftar akun dari Buku Besar (SAFE)
+    daftar_akun_values = []
+    
+    if "buku_besar" in st.session_state and st.session_state.buku_besar:
+        if isinstance(st.session_state.buku_besar, dict):
+            for akun_no, akun_data in st.session_state.buku_besar.items():
+                if isinstance(akun_data, dict) and "nama_akun" in akun_data:
+                    daftar_akun_values.append(akun_data["nama_akun"])
     
     gb = GridOptionsBuilder.from_dataframe(st.session_state.neraca_saldo)
     gb.configure_default_column(editable=True, resizable=True)
     gb.configure_grid_options(stopEditingWhenCellsLoseFocus=False)
     
-    # DROPDOWN untuk kolom Nama Akun (dari Buku Besar)
+    # Dropdown untuk kolom Akun (dari Buku Besar)
     if daftar_akun_values:
         gb.configure_column(
-            "Nama Akun",
+            "Akun",
             editable=True,
             cellEditor="agSelectCellEditor",
             cellEditorParams={
@@ -415,15 +452,15 @@ with tab3:
         st.session_state.neraca_saldo = new_neraca.copy()
 
     # Filter data valid
-    df_neraca_clean = new_neraca[new_neraca["Nama Akun"].astype(str).str.strip() != ""]
+    df_neraca_clean = new_neraca[new_neraca["Akun"].astype(str).str.strip() != ""]
 
     if not df_neraca_clean.empty:
         total_debit = df_neraca_clean["Debit (Rp)"].sum()
         total_kredit = df_neraca_clean["Kredit (Rp)"].sum()
 
         total_row = pd.DataFrame({
-            "No Akun": [""],
-            "Nama Akun": ["Jumlah"],
+            "Ref": [""],
+            "Akun": ["Jumlah"],
             "Debit (Rp)": [total_debit],
             "Kredit (Rp)": [total_kredit]
         })
@@ -454,7 +491,7 @@ with tab3:
 
             pdf.set_font("Arial", 'B', 10)
             col_widths = [15, 25, 70, 40, 40]
-            headers = ["No", "No Akun", "Nama Akun", "Debit (Rp)", "Kredit (Rp)"]
+            headers = ["No", "Ref", "Akun", "Debit (Rp)", "Kredit (Rp)"]
             
             for i, header in enumerate(headers):
                 pdf.cell(col_widths[i], 10, header, border=1, align="C")
@@ -463,12 +500,12 @@ with tab3:
             pdf.set_font("Arial", '', 9)
             for idx, row in df.iterrows():
                 pdf.cell(col_widths[0], 8, str(idx), border=1, align="C")
-                pdf.cell(col_widths[1], 8, str(row["No Akun"]), border=1, align="C")
+                pdf.cell(col_widths[1], 8, str(row["Ref"]), border=1, align="C")
                 
-                nama_akun = str(row["Nama Akun"])
-                if len(nama_akun) > 35:
-                    nama_akun = nama_akun[:32] + "..."
-                pdf.cell(col_widths[2], 8, nama_akun, border=1, align="L")
+                akun = str(row["Akun"])
+                if len(akun) > 35:
+                    akun = akun[:32] + "..."
+                pdf.cell(col_widths[2], 8, akun, border=1, align="L")
                 
                 debit_val = row["Debit (Rp)"]
                 debit_text = format_rupiah(debit_val) if isinstance(debit_val, (int, float)) and debit_val != 0 else "-"
@@ -499,7 +536,6 @@ with tab3:
         )
     else:
         st.warning("⚠️ Belum ada data valid di tabel Neraca Saldo.")
-
 # ========================================
 # TAB 4: LAPORAN KEUANGAN (FIXED LABA_BERSIH ERROR)
 # ========================================
