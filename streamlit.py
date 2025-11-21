@@ -501,7 +501,7 @@ with tab3:
         st.warning("⚠️ Belum ada data valid di tabel Neraca Saldo.")
 
 # ========================================
-# TAB 4: LAPORAN KEUANGAN (AUTO-GENERATE + SUB-TABS)
+# TAB 4: LAPORAN KEUANGAN (FIXED ERROR LINE 761)
 # ========================================
 with tab4:
     st.header("📊 Laporan Keuangan BUMDes")
@@ -562,8 +562,8 @@ with tab4:
         
         for _, row in df_neraca.iterrows():
             nama_akun = str(row["Nama Akun"]).lower()
-            debit = row["Debit (Rp)"]
-            kredit = row["Kredit (Rp)"]
+            debit = row["Debit (Rp)"] if pd.notna(row["Debit (Rp)"]) else 0
+            kredit = row["Kredit (Rp)"] if pd.notna(row["Kredit (Rp)"]) else 0
             
             # Klasifikasi berdasarkan nama akun
             if "pendapatan" in nama_akun or "penjualan" in nama_akun:
@@ -577,23 +577,27 @@ with tab4:
                 aktiva_lancar_list.append({"nama": row["Nama Akun"], "jumlah": debit})
             elif "peralatan" in nama_akun or "gedung" in nama_akun or "kendaraan" in nama_akun:
                 aktiva_tetap_list.append({"nama": row["Nama Akun"], "jumlah": debit})
-            elif "modal" in nama_akun and "prive" not in nama_akun:
+            elif "modal" in nama_akun:
                 modal_awal = kredit
             elif "hutang" in nama_akun or "utang" in nama_akun:
                 kewajiban_list.append({"nama": row["Nama Akun"], "jumlah": kredit})
         
-        # Hitung totals
-        total_pendapatan = sum([x["jumlah"] for x in pendapatan_list])
-        total_beban = sum([x["jumlah"] for x in beban_list])
+        # Hitung totals dengan SAFE fallback
+        total_pendapatan = sum([x["jumlah"] for x in pendapatan_list]) if pendapatan_list else 0
+        total_beban = sum([x["jumlah"] for x in beban_list]) if beban_list else 0
         laba_bersih = total_pendapatan - total_beban
         
-        total_aktiva_lancar = sum([x["jumlah"] for x in aktiva_lancar_list])
-        total_aktiva_tetap = sum([x["jumlah"] for x in aktiva_tetap_list])
+        total_aktiva_lancar = sum([x["jumlah"] for x in aktiva_lancar_list]) if aktiva_lancar_list else 0
+        total_aktiva_tetap = sum([x["jumlah"] for x in aktiva_tetap_list]) if aktiva_tetap_list else 0
         total_aktiva = total_aktiva_lancar + total_aktiva_tetap
         
-        total_kewajiban = sum([x["jumlah"] for x in kewajiban_list])
+        total_kewajiban = sum([x["jumlah"] for x in kewajiban_list]) if kewajiban_list else 0
         modal_akhir = modal_awal + laba_bersih
         total_passiva = total_kewajiban + modal_akhir
+        
+        # Pastikan tidak ada pd.NA atau NaN
+        total_aktiva = 0 if pd.isna(total_aktiva) else float(total_aktiva)
+        total_passiva = 0 if pd.isna(total_passiva) else float(total_passiva)
         
         # === SUB-TABS untuk 3 Laporan ===
         subtab1, subtab2, subtab3 = st.tabs([
@@ -636,7 +640,7 @@ with tab4:
                 df_labarugi.style.format({
                     "Jumlah": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x
                 })
-                .apply(lambda x: ['font-weight: bold' if 'Total' in str(df_labarugi.loc[i, 'Keterangan']) or 'Laba Bersih' in str(df_labarugi.loc[i, 'Keterangan']) else '' for i in range(len(x))], axis=0)
+                .apply(lambda x: ['font-weight: bold' if i < len(df_labarugi) and ('Total' in str(df_labarugi.loc[i, 'Keterangan']) or 'Laba Bersih' in str(df_labarugi.loc[i, 'Keterangan'])) else '' for i in range(len(x))], axis=0)
                 .set_properties(**{'text-align': 'left'}, subset=['Keterangan'])
                 .set_properties(**{'text-align': 'right'}, subset=['Jumlah']),
                 use_container_width=True,
@@ -664,13 +668,16 @@ with tab4:
                 pdf.ln()
 
                 pdf.set_font("Arial", '', 9)
-                for _, row in df.iterrows():
-                    # Bold untuk baris total
+                for idx in range(len(df)):
+                    row = df.iloc[idx]
                     is_bold = 'Total' in str(row['Keterangan']) or 'Laba' in str(row['Keterangan'])
                     if is_bold:
                         pdf.set_font("Arial", 'B', 9)
                     
-                    pdf.cell(col_widths[0], 8, str(row["Keterangan"]), border=1, align="L")
+                    ket = str(row["Keterangan"])
+                    if len(ket) > 50:
+                        ket = ket[:47] + "..."
+                    pdf.cell(col_widths[0], 8, ket, border=1, align="L")
                     
                     jumlah_text = format_rupiah(row["Jumlah"]) if isinstance(row["Jumlah"], (int, float)) else ""
                     pdf.cell(col_widths[1], 8, jumlah_text, border=1, align="R")
@@ -698,7 +705,7 @@ with tab4:
             )
         
         # ========================================
-        # SUB-TAB 2: LAPORAN NERACA
+        # SUB-TAB 2: LAPORAN NERACA (FIXED VALIDATION)
         # ========================================
         with subtab2:
             st.markdown("### 🏦 Laporan Neraca")
@@ -712,7 +719,7 @@ with tab4:
             neraca_data.append({"Aktiva": "Aktiva Lancar:", "Jumlah1": "", "Passiva": "Kewajiban:", "Jumlah2": ""})
             
             # Aktiva Lancar & Kewajiban
-            max_rows = max(len(aktiva_lancar_list), len(kewajiban_list))
+            max_rows = max(len(aktiva_lancar_list), len(kewajiban_list)) if (aktiva_lancar_list or kewajiban_list) else 0
             for i in range(max_rows):
                 aktiva_item = aktiva_lancar_list[i]["nama"] if i < len(aktiva_lancar_list) else ""
                 aktiva_val = aktiva_lancar_list[i]["jumlah"] if i < len(aktiva_lancar_list) else ""
@@ -750,18 +757,22 @@ with tab4:
                     "Jumlah1": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x,
                     "Jumlah2": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x
                 })
-                .apply(lambda x: ['font-weight: bold' if 'Jml' in str(df_neraca_lap.loc[i, 'Aktiva']) or 'Jml' in str(df_neraca_lap.loc[i, 'Passiva']) else '' for i in range(len(x))], axis=0)
+                .apply(lambda x: ['font-weight: bold' if i < len(df_neraca_lap) and ('Jml' in str(df_neraca_lap.loc[i, 'Aktiva']) or 'Jml' in str(df_neraca_lap.loc[i, 'Passiva'])) else '' for i in range(len(x))], axis=0)
                 .set_properties(**{'text-align': 'left'}, subset=['Aktiva', 'Passiva'])
                 .set_properties(**{'text-align': 'right'}, subset=['Jumlah1', 'Jumlah2']),
                 use_container_width=True,
                 hide_index=True
             )
             
-            # Validasi Balance
-            if abs(total_aktiva - total_passiva) < 0.01:
-                st.success(f"✅ Neraca BALANCE! Total: Rp {format_rupiah(total_aktiva)}")
-            else:
-                st.error(f"❌ Neraca TIDAK BALANCE! Aktiva: Rp {format_rupiah(total_aktiva)} vs Passiva: Rp {format_rupiah(total_passiva)}")
+            # Validasi Balance (FIXED!)
+            try:
+                selisih = abs(float(total_aktiva) - float(total_passiva))
+                if selisih < 0.01:
+                    st.success(f"✅ Neraca BALANCE! Total: Rp {format_rupiah(total_aktiva)}")
+                else:
+                    st.error(f"❌ Neraca TIDAK BALANCE! Aktiva: Rp {format_rupiah(total_aktiva)} vs Passiva: Rp {format_rupiah(total_passiva)}")
+            except (TypeError, ValueError, AttributeError):
+                st.warning("⚠️ Tidak dapat menghitung balance. Pastikan semua data numerik valid.")
             
             # PDF Export Neraca
             def buat_pdf_neraca_lap(df, bulan, tahun):
@@ -784,7 +795,8 @@ with tab4:
                 pdf.ln()
 
                 pdf.set_font("Arial", '', 9)
-                for _, row in df.iterrows():
+                for idx in range(len(df)):
+                    row = df.iloc[idx]
                     is_bold = 'Jml' in str(row['Aktiva']) or 'Jml' in str(row['Passiva'])
                     if is_bold:
                         pdf.set_font("Arial", 'B', 9)
@@ -830,7 +842,6 @@ with tab4:
             st.markdown(f"**BUMDes - {bulan_dict[bulan_laporan]} {tahun_laporan}**")
             st.markdown("---")
             
-            # Input manual untuk Arus Kas (karena tidak bisa auto-generate)
             st.info("💡 Laporan Arus Kas memerlukan input manual karena tidak bisa digenerate otomatis dari Neraca Saldo.")
             
             if "arus_kas_refresh" not in st.session_state:
@@ -874,7 +885,7 @@ with tab4:
                 if not new_arus_pendanaan.equals(st.session_state.arus_kas_pendanaan):
                     st.session_state.arus_kas_pendanaan = new_arus_pendanaan.copy()
 
-            # Tombol kontrol untuk Arus Kas
+            # Tombol kontrol
             st.markdown("---")
             col1, col2, col3 = st.columns(3)
             
@@ -917,7 +928,7 @@ with tab4:
             if not df_operasi_clean.empty or not df_investasi_clean.empty or not df_pendanaan_clean.empty:
                 st.write("### 📊 Hasil Laporan Arus Kas")
                 
-                # Format data untuk tabel
+                # Format data
                 arus_kas_data = []
                 arus_kas_data.append({"Aktivitas": "Arus Kas Operasi:", "Jumlah": ""})
                 
@@ -942,7 +953,7 @@ with tab4:
                     df_arus_kas.style.format({
                         "Jumlah": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x
                     })
-                    .apply(lambda x: ['font-weight: bold' if 'Arus Kas' in str(df_arus_kas.loc[i, 'Aktivitas']) else '' for i in range(len(x))], axis=0)
+                    .apply(lambda x: ['font-weight: bold' if i < len(df_arus_kas) and 'Arus Kas' in str(df_arus_kas.loc[i, 'Aktivitas']) else '' for i in range(len(x))], axis=0)
                     .set_properties(**{'text-align': 'left'}, subset=['Aktivitas'])
                     .set_properties(**{'text-align': 'right'}, subset=['Jumlah']),
                     use_container_width=True,
@@ -970,7 +981,8 @@ with tab4:
                     pdf.ln()
 
                     pdf.set_font("Arial", '', 9)
-                    for _, row in df.iterrows():
+                    for idx in range(len(df)):
+                        row = df.iloc[idx]
                         is_bold = 'Arus Kas' in str(row['Aktivitas'])
                         if is_bold:
                             pdf.set_font("Arial", 'B', 9)
@@ -1005,4 +1017,4 @@ with tab4:
                     use_container_width=True
                 )
             else:
-                st.warning("⚠️ Belum ada data untuk Laporan Arus Kas. Silakan isi data terlebih dahulu.")
+                st.warning("⚠️ Belum ada data untuk Laporan Arus Kas.")
