@@ -1201,7 +1201,7 @@ with tab4:
             hide_index=True
         )
         
-        # PDF Export Neraca (DIPERBAIKI)
+        # PDF Export Neraca (LENGKAP & DIPERBAIKI)
         def buat_pdf_neraca_lap(df, bulan, tahun):
             pdf = FPDF()
             pdf.add_page()
@@ -1212,8 +1212,50 @@ with tab4:
             pdf.cell(0, 8, txt=f"Periode: {bulan_dict[bulan]} {tahun}", ln=True, align="C")
             pdf.ln(5)
             pdf.set_font("Arial", 'B', 10)
+            
             col_widths = [60, 30, 60, 30]
-            headers = ["Aktiva",
+            headers = ["Aktiva", "Jumlah (Rp)", "Passiva", "Jumlah (Rp)"]
+            
+            for i, header in enumerate(headers):
+                pdf.cell(col_widths[i], 10, header, border=1, align="C")
+            pdf.ln()
+            
+            pdf.set_font("Arial", '', 9)
+            for idx in range(len(df)):
+                row = df.iloc[idx]
+                is_bold = 'Jml' in str(row.get('Aktiva', '')) or 'Jml' in str(row.get('Passiva', ''))
+                if is_bold:
+                    pdf.set_font("Arial", 'B', 9)
+                
+                # Kolom 1: Aktiva
+                aktiva_text = str(row["Aktiva"])[:28] + "..." if len(str(row["Aktiva"])) > 30 else str(row["Aktiva"])
+                pdf.cell(col_widths[0], 8, aktiva_text, border=1, align="L")
+                
+                # Kolom 2: Jumlah Aktiva
+                jumlah1_text = format_rupiah(row["Jumlah1"]) if isinstance(row["Jumlah1"], (int, float)) and row["Jumlah1"] != 0 else ""
+                pdf.cell(col_widths[1], 8, jumlah1_text, border=1, align="R")
+                
+                # Kolom 3: Passiva
+                passiva_text = str(row["Passiva"])[:28] + "..." if len(str(row["Passiva"])) > 30 else str(row["Passiva"])
+                pdf.cell(col_widths[2], 8, passiva_text, border=1, align="L")
+                
+                # Kolom 4: Jumlah Passiva
+                jumlah2_text = format_rupiah(row["Jumlah2"]) if isinstance(row["Jumlah2"], (int, float)) and row["Jumlah2"] != 0 else ""
+                pdf.cell(col_widths[3], 8, jumlah2_text, border=1, align="R")
+                
+                pdf.ln()
+                
+                if is_bold:
+                    pdf.set_font("Arial", '', 9)
+            
+            pdf.ln(5)
+            pdf.set_font("Arial", 'I', 8)
+            pdf.cell(0, 5, txt="Dicetak dari Sistem Akuntansi BUMDes", ln=True, align="C")
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                pdf.output(tmp.name)
+                tmp.seek(0)
+                return tmp.read()
     
     # ========================================
     # SUB-TAB 3: ARUS KAS (DENGAN RELOAD)
