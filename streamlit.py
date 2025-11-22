@@ -644,8 +644,8 @@ with tab4:
         "💸 Arus Kas"
     ])
     
-    # ========================================
-    # SUB-TAB 1: LAPORAN LABA/RUGI
+       # ========================================
+    # SUB-TAB 1: LAPORAN LABA/RUGI (REVISED)
     # ========================================
     with subtab1:
         st.markdown("### 📈 Laporan Laba/Rugi")
@@ -658,11 +658,14 @@ with tab4:
             st.session_state.laporan_refresh += 1
             st.rerun()
         
+        st.info("💡 Tabel Pendapatan dan Beban menggunakan format Debit & Kredit seperti di Neraca Saldo.")
+        
         # Input Hybrid
         col1, col2 = st.columns(2)
         
         with col1:
-            st.write("#### Input Pendapatan (Kredit):")
+            st.write("#### Input Pendapatan:")
+            st.caption("Pendapatan umumnya berada di kolom **Kredit**")
             
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
@@ -711,7 +714,8 @@ with tab4:
                         st.rerun()
 
         with col2:
-            st.write("#### Input Beban-Beban (Debit):")
+            st.write("#### Input Beban-Beban:")
+            st.caption("Beban umumnya berada di kolom **Debit**")
             
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
@@ -765,11 +769,17 @@ with tab4:
         df_pendapatan_clean = new_pendapatan[new_pendapatan["Jenis Pendapatan"].astype(str).str.strip() != ""]
         df_beban_clean = new_beban[new_beban["Jenis Beban"].astype(str).str.strip() != ""]
 
-        # Pendapatan = Kredit, Beban = Debit
-        total_pendapatan = df_pendapatan_clean["Kredit (Rp)"].sum() if not df_pendapatan_clean.empty else 0
-        total_beban = df_beban_clean["Debit (Rp)"].sum() if not df_beban_clean.empty else 0
+        # Total Pendapatan = (Kredit - Debit)
+        total_pendapatan_debit = df_pendapatan_clean["Debit (Rp)"].sum() if not df_pendapatan_clean.empty else 0
+        total_pendapatan_kredit = df_pendapatan_clean["Kredit (Rp)"].sum() if not df_pendapatan_clean.empty else 0
+        total_pendapatan = total_pendapatan_kredit - total_pendapatan_debit
         
-        # SIMPAN di session_state agar bisa diakses sub-tab lain!
+        # Total Beban = (Debit - Kredit)
+        total_beban_debit = df_beban_clean["Debit (Rp)"].sum() if not df_beban_clean.empty else 0
+        total_beban_kredit = df_beban_clean["Kredit (Rp)"].sum() if not df_beban_clean.empty else 0
+        total_beban = total_beban_debit - total_beban_kredit
+        
+        # Laba Bersih = Total Pendapatan - Total Beban
         st.session_state.laba_bersih = total_pendapatan - total_beban
 
         if not df_pendapatan_clean.empty or not df_beban_clean.empty:
@@ -779,29 +789,43 @@ with tab4:
             result_data.append({"Keterangan": "Pendapatan:", "Debit": "", "Kredit": ""})
             
             for idx, row in df_pendapatan_clean.iterrows():
+                debit_val = row["Debit (Rp)"] if row["Debit (Rp)"] != 0 else ""
+                kredit_val = row["Kredit (Rp)"] if row["Kredit (Rp)"] != 0 else ""
                 result_data.append({
                     "Keterangan": f"  {idx+1}. {row['Jenis Pendapatan']}", 
-                    "Debit": row["Debit (Rp)"] if row["Debit (Rp)"] != 0 else "",
-                    "Kredit": row["Kredit (Rp)"]
+                    "Debit": debit_val,
+                    "Kredit": kredit_val
                 })
             
             result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
-            result_data.append({"Keterangan": "Total Pendapatan", "Debit": "", "Kredit": total_pendapatan})
+            # Tampilkan Total Pendapatan (Kredit - Debit) di kolom Kredit jika positif
+            if total_pendapatan >= 0:
+                result_data.append({"Keterangan": "Total Pendapatan", "Debit": "", "Kredit": total_pendapatan})
+            else:
+                result_data.append({"Keterangan": "Total Pendapatan", "Debit": abs(total_pendapatan), "Kredit": ""})
+            
             result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
             result_data.append({"Keterangan": "Beban-Beban:", "Debit": "", "Kredit": ""})
             
             for idx, row in df_beban_clean.iterrows():
+                debit_val = row["Debit (Rp)"] if row["Debit (Rp)"] != 0 else ""
+                kredit_val = row["Kredit (Rp)"] if row["Kredit (Rp)"] != 0 else ""
                 result_data.append({
                     "Keterangan": f"  {idx+1}. {row['Jenis Beban']}", 
-                    "Debit": row["Debit (Rp)"],
-                    "Kredit": row["Kredit (Rp)"] if row["Kredit (Rp)"] != 0 else ""
+                    "Debit": debit_val,
+                    "Kredit": kredit_val
                 })
             
             result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
-            result_data.append({"Keterangan": "Total Beban", "Debit": total_beban, "Kredit": ""})
+            # Tampilkan Total Beban (Debit - Kredit) di kolom Debit jika positif
+            if total_beban >= 0:
+                result_data.append({"Keterangan": "Total Beban", "Debit": total_beban, "Kredit": ""})
+            else:
+                result_data.append({"Keterangan": "Total Beban", "Debit": "", "Kredit": abs(total_beban)})
+            
             result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
             
-            # Laba Bersih = Kredit - Debit
+            # Laba/Rugi Bersih
             if st.session_state.laba_bersih >= 0:
                 result_data.append({"Keterangan": "Laba Bersih", "Debit": "", "Kredit": st.session_state.laba_bersih})
             else:
@@ -837,23 +861,30 @@ with tab4:
                 pdf.cell(45, 10, "Kredit (Rp)", border=1, align="C")
                 pdf.ln()
                 pdf.set_font("Arial", '', 9)
+                
                 for idx in range(len(df)):
                     row = df.iloc[idx]
                     is_bold = 'Total' in str(row['Keterangan']) or 'Laba' in str(row['Keterangan']) or 'Rugi' in str(row['Keterangan'])
                     if is_bold:
                         pdf.set_font("Arial", 'B', 9)
+                    
                     ket = str(row["Keterangan"])[:40] + "..." if len(str(row["Keterangan"])) > 43 else str(row["Keterangan"])
                     pdf.cell(90, 8, ket, border=1, align="L")
+                    
                     debit_text = format_rupiah(row["Debit"]) if isinstance(row["Debit"], (int, float)) else ""
                     pdf.cell(45, 8, debit_text, border=1, align="R")
+                    
                     kredit_text = format_rupiah(row["Kredit"]) if isinstance(row["Kredit"], (int, float)) else ""
                     pdf.cell(45, 8, kredit_text, border=1, align="R")
                     pdf.ln()
+                    
                     if is_bold:
                         pdf.set_font("Arial", '', 9)
+                
                 pdf.ln(5)
                 pdf.set_font("Arial", 'I', 8)
                 pdf.cell(0, 5, txt="Dicetak dari Sistem Akuntansi BUMDes", ln=True, align="C")
+                
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                     pdf.output(tmp.name)
                     tmp.seek(0)
