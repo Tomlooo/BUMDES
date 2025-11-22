@@ -670,7 +670,7 @@ with tab4:
     ])
     
     # ========================================
-    # SUB-TAB 1: LAPORAN LABA/RUGI
+    # SUB-TAB 1: LAPORAN LABA/RUGI (FIXED)
     # ========================================
     with subtab1:
         st.markdown("### 📈 Laporan Laba/Rugi")
@@ -805,12 +805,13 @@ with tab4:
         # Laba Bersih = Total Pendapatan - Total Beban
         st.session_state.laba_bersih = total_pendapatan - total_beban
 
-        if not df_pendapatan_clean.empty or not df_beban_clean.empty:
-            st.write("### 📊 Hasil Laporan Laba/Rugi")
-            
-            result_data = []
-            result_data.append({"Keterangan": "Pendapatan:", "Debit": "", "Kredit": ""})
-            
+        # ✅ SELALU TAMPILKAN (HAPUS IF)
+        st.write("### 📊 Hasil Laporan Laba/Rugi")
+        
+        result_data = []
+        result_data.append({"Keterangan": "Pendapatan:", "Debit": "", "Kredit": ""})
+        
+        if not df_pendapatan_clean.empty:
             for idx, row in df_pendapatan_clean.iterrows():
                 debit_val = row["Debit (Rp)"] if row["Debit (Rp)"] != 0 else ""
                 kredit_val = row["Kredit (Rp)"] if row["Kredit (Rp)"] != 0 else ""
@@ -819,16 +820,17 @@ with tab4:
                     "Debit": debit_val,
                     "Kredit": kredit_val
                 })
-            
-            result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
-            if total_pendapatan >= 0:
-                result_data.append({"Keterangan": "Total Pendapatan", "Debit": "", "Kredit": total_pendapatan})
-            else:
-                result_data.append({"Keterangan": "Total Pendapatan", "Debit": abs(total_pendapatan), "Kredit": ""})
-            
-            result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
-            result_data.append({"Keterangan": "Beban-Beban:", "Debit": "", "Kredit": ""})
-            
+        
+        result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
+        if total_pendapatan >= 0:
+            result_data.append({"Keterangan": "Total Pendapatan", "Debit": "", "Kredit": total_pendapatan})
+        else:
+            result_data.append({"Keterangan": "Total Pendapatan", "Debit": abs(total_pendapatan), "Kredit": ""})
+        
+        result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
+        result_data.append({"Keterangan": "Beban-Beban:", "Debit": "", "Kredit": ""})
+        
+        if not df_beban_clean.empty:
             for idx, row in df_beban_clean.iterrows():
                 debit_val = row["Debit (Rp)"] if row["Debit (Rp)"] != 0 else ""
                 kredit_val = row["Kredit (Rp)"] if row["Kredit (Rp)"] != 0 else ""
@@ -837,35 +839,36 @@ with tab4:
                     "Debit": debit_val,
                     "Kredit": kredit_val
                 })
-            
-            result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
-            if total_beban >= 0:
-                result_data.append({"Keterangan": "Total Beban", "Debit": total_beban, "Kredit": ""})
-            else:
-                result_data.append({"Keterangan": "Total Beban", "Debit": "", "Kredit": abs(total_beban)})
-            
-            result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
-            
-            if st.session_state.laba_bersih >= 0:
-                result_data.append({"Keterangan": "Laba Bersih", "Debit": "", "Kredit": st.session_state.laba_bersih})
-            else:
-                result_data.append({"Keterangan": "Rugi Bersih", "Debit": abs(st.session_state.laba_bersih), "Kredit": ""})
+        
+        result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
+        if total_beban >= 0:
+            result_data.append({"Keterangan": "Total Beban", "Debit": total_beban, "Kredit": ""})
+        else:
+            result_data.append({"Keterangan": "Total Beban", "Debit": "", "Kredit": abs(total_beban)})
+        
+        result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
+        
+        if st.session_state.laba_bersih >= 0:
+            result_data.append({"Keterangan": "Laba Bersih", "Debit": "", "Kredit": st.session_state.laba_bersih})
+        else:
+            result_data.append({"Keterangan": "Rugi Bersih", "Debit": abs(st.session_state.laba_bersih), "Kredit": ""})
 
-            df_labarugi = pd.DataFrame(result_data)
-            
-            st.dataframe(
-                df_labarugi.style.format({
-                    "Debit": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x,
-                    "Kredit": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x
-                })
-                .apply(lambda x: ['font-weight: bold' if i < len(df_labarugi) and ('Total' in str(df_labarugi.iloc[i]['Keterangan']) or 'Laba' in str(df_labarugi.iloc[i]['Keterangan']) or 'Rugi' in str(df_labarugi.iloc[i]['Keterangan'])) else '' for i in range(len(x))], axis=0)
-                .set_properties(**{'text-align': 'left'}, subset=['Keterangan'])
-                .set_properties(**{'text-align': 'right'}, subset=['Debit', 'Kredit']),
-                use_container_width=True,
-                hide_index=True
-            )
-            
-            # PDF Export Laba/Rugi (FIXED)
+        df_labarugi = pd.DataFrame(result_data)
+        
+        st.dataframe(
+            df_labarugi.style.format({
+                "Debit": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x,
+                "Kredit": lambda x: format_rupiah(x) if isinstance(x, (int, float)) else x
+            })
+            .apply(lambda x: ['font-weight: bold' if i < len(df_labarugi) and ('Total' in str(df_labarugi.iloc[i]['Keterangan']) or 'Laba' in str(df_labarugi.iloc[i]['Keterangan']) or 'Rugi' in str(df_labarugi.iloc[i]['Keterangan'])) else '' for i in range(len(x))], axis=0)
+            .set_properties(**{'text-align': 'left'}, subset=['Keterangan'])
+            .set_properties(**{'text-align': 'right'}, subset=['Debit', 'Kredit']),
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # ✅ PDF Export Laba/Rugi (FIXED - TAMPILKAN SEMUA NILAI)
+        try:
             def buat_pdf_labarugi(df, bulan, tahun):
                 pdf = FPDF()
                 pdf.add_page()
@@ -891,21 +894,27 @@ with tab4:
                     ket = str(row["Keterangan"])[:40] + "..." if len(str(row["Keterangan"])) > 43 else str(row["Keterangan"])
                     pdf.cell(90, 8, ket, border=1, align="L")
                     
-                    # ✅ FIX: Tampilkan semua nilai termasuk 0, kecuali string kosong atau NaN
+                    # ✅ FIX: Tampilkan SEMUA nilai (termasuk yang di Total)
                     debit_val = row["Debit"]
-                    if pd.notna(debit_val) and debit_val != "" and debit_val != 0:
-                        debit_text = format_rupiah(debit_val)
-                    elif isinstance(debit_val, (int, float)) and debit_val == 0 and is_bold:
-                        debit_text = "-"  # Total yang 0 tampilkan "-"
+                    if isinstance(debit_val, (int, float)) and debit_val != 0:
+                        debit_text = format_rupiah(float(debit_val))
+                    elif pd.notna(debit_val) and str(debit_val).strip() != "":
+                        try:
+                            debit_text = format_rupiah(float(debit_val))
+                        except:
+                            debit_text = ""
                     else:
                         debit_text = ""
                     pdf.cell(45, 8, debit_text, border=1, align="R")
                     
                     kredit_val = row["Kredit"]
-                    if pd.notna(kredit_val) and kredit_val != "" and kredit_val != 0:
-                        kredit_text = format_rupiah(kredit_val)
-                    elif isinstance(kredit_val, (int, float)) and kredit_val == 0 and is_bold:
-                        kredit_text = "-"  # Total yang 0 tampilkan "-"
+                    if isinstance(kredit_val, (int, float)) and kredit_val != 0:
+                        kredit_text = format_rupiah(float(kredit_val))
+                    elif pd.notna(kredit_val) and str(kredit_val).strip() != "":
+                        try:
+                            kredit_text = format_rupiah(float(kredit_val))
+                        except:
+                            kredit_text = ""
                     else:
                         kredit_text = ""
                     pdf.cell(45, 8, kredit_text, border=1, align="R")
@@ -923,6 +932,19 @@ with tab4:
                     pdf.output(tmp.name)
                     tmp.seek(0)
                     return tmp.read()
+
+            pdf_labarugi = buat_pdf_labarugi(df_labarugi, bulan_laporan, tahun_laporan)
+            
+            st.download_button(
+                "📥 Download PDF Laba/Rugi",
+                data=pdf_labarugi,
+                file_name=f"laporan_labarugi_{bulan_laporan}_{tahun_laporan}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"❌ Error membuat PDF: {str(e)}")
+            st.info("💡 Silakan screenshot hasil laporan di atas sebagai alternatif.")
     
     # ========================================
     # SUB-TAB 2: LAPORAN NERACA
