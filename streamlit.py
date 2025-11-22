@@ -587,8 +587,8 @@ with tab4:
     if "laba_bersih" not in st.session_state:
         st.session_state.laba_bersih = 0
 
-    # ========================================
-    # AUTO-LOAD DARI NERACA SALDO (SEKALI SAJA)
+        # ========================================
+    # AUTO-LOAD DARI NERACA SALDO (DIPERBAIKI)
     # ========================================
     if "pendapatan_loaded" not in st.session_state:
         st.session_state.pendapatan_loaded = False
@@ -606,18 +606,27 @@ with tab4:
         st.session_state.kewajiban = pd.DataFrame([{"Item": "", "Jumlah (Rp)": 0}])
         st.session_state.modal_data = {"modal_awal": 0}
         
-        # Auto-populate dari Neraca Saldo
+        # Auto-populate dari Neraca Saldo (DIPERBAIKI)
         for _, row in df_neraca.iterrows():
             nama_akun = str(row["Akun"]).lower()
             debit = row["Debit (Rp)"] if pd.notna(row["Debit (Rp)"]) else 0
             kredit = row["Kredit (Rp)"] if pd.notna(row["Kredit (Rp)"]) else 0
             
+            # ✅ FIX: Ambil nilai Debit & Kredit dari Neraca Saldo
             if "pendapatan" in nama_akun or "penjualan" in nama_akun:
-                new_row = pd.DataFrame([{"Jenis Pendapatan": row["Akun"], "Debit (Rp)": 0, "Kredit (Rp)": kredit}])
+                new_row = pd.DataFrame([{
+                    "Jenis Pendapatan": row["Akun"], 
+                    "Debit (Rp)": debit,      # ← Ambil dari Neraca Saldo
+                    "Kredit (Rp)": kredit     # ← Ambil dari Neraca Saldo
+                }])
                 st.session_state.pendapatan = pd.concat([st.session_state.pendapatan, new_row], ignore_index=True)
             
-            elif "beban" in nama_akun or "biaya" in nama_akun:
-                new_row = pd.DataFrame([{"Jenis Beban": row["Akun"], "Debit (Rp)": debit, "Kredit (Rp)": 0}])
+            elif "beban" in nama_akun or "biaya" in nama_akun or "gaji" in nama_akun:
+                new_row = pd.DataFrame([{
+                    "Jenis Beban": row["Akun"], 
+                    "Debit (Rp)": debit,      # ← Ambil dari Neraca Saldo
+                    "Kredit (Rp)": kredit     # ← Ambil dari Neraca Saldo
+                }])
                 st.session_state.beban = pd.concat([st.session_state.beban, new_row], ignore_index=True)
             
             elif "kas" in nama_akun or "perlengkapan" in nama_akun or "piutang" in nama_akun:
