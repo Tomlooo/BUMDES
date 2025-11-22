@@ -947,7 +947,7 @@ with tab4:
             st.info("💡 Silakan screenshot hasil laporan di atas sebagai alternatif.")
     
     # ========================================
-    # SUB-TAB 2: LAPORAN NERACA
+    # SUB-TAB 2: LAPORAN NERACA (FIXED COMPLETELY)
     # ========================================
     with subtab2:
         st.markdown("### 🏦 Laporan Neraca")
@@ -1182,73 +1182,93 @@ with tab4:
             hide_index=True
         )
         
-        # PDF Export Neraca (FIXED)
-        def buat_pdf_neraca_lap(df, bulan, tahun):
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", 'B', 14)
-            pdf.cell(0, 10, txt="Laporan Neraca", ln=True, align="C")
-            pdf.set_font("Arial", '', 12)
-            pdf.cell(0, 8, txt="BUMDes", ln=True, align="C")
-            pdf.cell(0, 8, txt=f"Periode: {bulan_dict[bulan]} {tahun}", ln=True, align="C")
-            pdf.ln(5)
-            pdf.set_font("Arial", 'B', 10)
-            
-            col_widths = [60, 30, 60, 30]
-            headers = ["Aktiva", "Jumlah (Rp)", "Passiva", "Jumlah (Rp)"]
-            
-            for i, header in enumerate(headers):
-                pdf.cell(col_widths[i], 10, header, border=1, align="C")
-            pdf.ln()
-            
-            pdf.set_font("Arial", '', 9)
-            for idx in range(len(df)):
-                row = df.iloc[idx]
-                is_bold = 'Jml' in str(row.get('Aktiva', '')) or 'Jml' in str(row.get('Passiva', ''))
-                if is_bold:
-                    pdf.set_font("Arial", 'B', 9)
+        # ✅ PDF Export Neraca (FIXED - TAMPILKAN SEMUA NILAI)
+        try:
+            def buat_pdf_neraca_lap(df, bulan, tahun):
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", 'B', 14)
+                pdf.cell(0, 10, txt="Laporan Neraca", ln=True, align="C")
+                pdf.set_font("Arial", '', 12)
+                pdf.cell(0, 8, txt="BUMDes", ln=True, align="C")
+                pdf.cell(0, 8, txt=f"Periode: {bulan_dict[bulan]} {tahun}", ln=True, align="C")
+                pdf.ln(5)
+                pdf.set_font("Arial", 'B', 10)
                 
-                # Kolom 1: Aktiva
-                aktiva_text = str(row["Aktiva"])[:28] + "..." if len(str(row["Aktiva"])) > 30 else str(row["Aktiva"])
-                pdf.cell(col_widths[0], 8, aktiva_text, border=1, align="L")
+                col_widths = [60, 30, 60, 30]
+                headers = ["Aktiva", "Jumlah (Rp)", "Passiva", "Jumlah (Rp)"]
                 
-                # Kolom 2: Jumlah Aktiva (✅ FIXED)
-                jumlah1_val = row["Jumlah1"]
-                if pd.notna(jumlah1_val) and jumlah1_val != "" and jumlah1_val != 0:
-                    jumlah1_text = format_rupiah(jumlah1_val)
-                elif isinstance(jumlah1_val, (int, float)) and jumlah1_val == 0:
-                    jumlah1_text = "-"  # Tampilkan "-" untuk nilai 0
-                else:
-                    jumlah1_text = ""
-                pdf.cell(col_widths[1], 8, jumlah1_text, border=1, align="R")
-                
-                # Kolom 3: Passiva
-                passiva_text = str(row["Passiva"])[:28] + "..." if len(str(row["Passiva"])) > 30 else str(row["Passiva"])
-                pdf.cell(col_widths[2], 8, passiva_text, border=1, align="L")
-                
-                # Kolom 4: Jumlah Passiva (✅ FIXED)
-                jumlah2_val = row["Jumlah2"]
-                if pd.notna(jumlah2_val) and jumlah2_val != "" and jumlah2_val != 0:
-                    jumlah2_text = format_rupiah(jumlah2_val)
-                elif isinstance(jumlah2_val, (int, float)) and jumlah2_val == 0:
-                    jumlah2_text = "-"  # Tampilkan "-" untuk nilai 0
-                else:
-                    jumlah2_text = ""
-                pdf.cell(col_widths[3], 8, jumlah2_text, border=1, align="R")
-                
+                for i, header in enumerate(headers):
+                    pdf.cell(col_widths[i], 10, header, border=1, align="C")
                 pdf.ln()
                 
-                if is_bold:
-                    pdf.set_font("Arial", '', 9)
+                pdf.set_font("Arial", '', 9)
+                for idx in range(len(df)):
+                    row = df.iloc[idx]
+                    is_bold = 'Jml' in str(row.get('Aktiva', '')) or 'Jml' in str(row.get('Passiva', ''))
+                    if is_bold:
+                        pdf.set_font("Arial", 'B', 9)
+                    
+                    # Kolom 1: Aktiva
+                    aktiva_text = str(row["Aktiva"])[:28] + "..." if len(str(row["Aktiva"])) > 30 else str(row["Aktiva"])
+                    pdf.cell(col_widths[0], 8, aktiva_text, border=1, align="L")
+                    
+                    # Kolom 2: Jumlah Aktiva (✅ FIXED - TAMPILKAN SEMUA)
+                    jumlah1_val = row["Jumlah1"]
+                    if isinstance(jumlah1_val, (int, float)) and jumlah1_val != 0:
+                        jumlah1_text = format_rupiah(float(jumlah1_val))
+                    elif pd.notna(jumlah1_val) and str(jumlah1_val).strip() != "":
+                        try:
+                            jumlah1_text = format_rupiah(float(jumlah1_val))
+                        except:
+                            jumlah1_text = ""
+                    else:
+                        jumlah1_text = ""
+                    pdf.cell(col_widths[1], 8, jumlah1_text, border=1, align="R")
+                    
+                    # Kolom 3: Passiva
+                    passiva_text = str(row["Passiva"])[:28] + "..." if len(str(row["Passiva"])) > 30 else str(row["Passiva"])
+                    pdf.cell(col_widths[2], 8, passiva_text, border=1, align="L")
+                    
+                    # Kolom 4: Jumlah Passiva (✅ FIXED - TAMPILKAN SEMUA)
+                    jumlah2_val = row["Jumlah2"]
+                    if isinstance(jumlah2_val, (int, float)) and jumlah2_val != 0:
+                        jumlah2_text = format_rupiah(float(jumlah2_val))
+                    elif pd.notna(jumlah2_val) and str(jumlah2_val).strip() != "":
+                        try:
+                            jumlah2_text = format_rupiah(float(jumlah2_val))
+                        except:
+                            jumlah2_text = ""
+                    else:
+                        jumlah2_text = ""
+                    pdf.cell(col_widths[3], 8, jumlah2_text, border=1, align="R")
+                    
+                    pdf.ln()
+                    
+                    if is_bold:
+                        pdf.set_font("Arial", '', 9)
+                
+                pdf.ln(5)
+                pdf.set_font("Arial", 'I', 8)
+                pdf.cell(0, 5, txt="Dicetak dari Sistem Akuntansi BUMDes", ln=True, align="C")
+                
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                    pdf.output(tmp.name)
+                    tmp.seek(0)
+                    return tmp.read()
+
+            pdf_neraca = buat_pdf_neraca_lap(df_neraca_lap, bulan_laporan, tahun_laporan)
             
-            pdf.ln(5)
-            pdf.set_font("Arial", 'I', 8)
-            pdf.cell(0, 5, txt="Dicetak dari Sistem Akuntansi BUMDes", ln=True, align="C")
-            
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                pdf.output(tmp.name)
-                tmp.seek(0)
-                return tmp.read()
+            st.download_button(
+                "📥 Download PDF Neraca",
+                data=pdf_neraca,
+                file_name=f"laporan_neraca_{bulan_laporan}_{tahun_laporan}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"❌ Error membuat PDF: {str(e)}")
+            st.info("💡 Silakan screenshot hasil laporan di atas sebagai alternatif.")
     
     # ========================================
     # SUB-TAB 3: ARUS KAS (DENGAN RELOAD)
