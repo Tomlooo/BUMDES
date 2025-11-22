@@ -1255,12 +1255,18 @@ with tab4:
         )
     
     # ========================================
-    # SUB-TAB 3: ARUS KAS
+    # SUB-TAB 3: ARUS KAS (DENGAN RELOAD)
     # ========================================
     with subtab3:
         st.markdown("### 💸 Laporan Arus Kas")
         st.markdown(f"**BUMDes - {bulan_dict[bulan_laporan]} {tahun_laporan}**")
         st.markdown("---")
+        
+        # ✅ TOMBOL RELOAD (SEPERTI SUB-TAB LAINNYA)
+        if st.button("🔄 Reload dari Neraca Saldo", key="reload_aruskas"):
+            st.session_state.pendapatan_loaded = False
+            st.session_state.laporan_refresh += 1
+            st.rerun()
         
         st.info("💡 Input manual untuk aktivitas arus kas.")
         
