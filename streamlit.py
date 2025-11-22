@@ -644,7 +644,7 @@ with tab4:
         "💸 Arus Kas"
     ])
     
-       # ========================================
+        # ========================================
     # SUB-TAB 1: LAPORAN LABA/RUGI (REVISED)
     # ========================================
     with subtab1:
@@ -665,7 +665,6 @@ with tab4:
         
         with col1:
             st.write("#### Input Pendapatan:")
-            st.caption("Pendapatan umumnya berada di kolom **Kredit**")
             
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
@@ -715,7 +714,6 @@ with tab4:
 
         with col2:
             st.write("#### Input Beban-Beban:")
-            st.caption("Beban umumnya berada di kolom **Debit**")
             
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
