@@ -537,7 +537,7 @@ with tab3:
     else:
         st.warning("⚠️ Belum ada data valid di tabel Neraca Saldo.")
 # ========================================
-# TAB 4: LAPORAN KEUANGAN
+# TAB 4: LAPORAN KEUANGAN (LENGKAP & DIPERBAIKI)
 # ========================================
 with tab4:
     st.header("📊 Laporan Keuangan BUMDes")
@@ -588,7 +588,7 @@ with tab4:
         st.session_state.laba_bersih = 0
 
     # ========================================
-    # AUTO-LOAD DARI NERACA SALDO (LENGKAP DENGAN ARUS KAS)
+    # AUTO-LOAD DARI NERACA SALDO (LENGKAP)
     # ========================================
     if "pendapatan_loaded" not in st.session_state:
         st.session_state.pendapatan_loaded = False
@@ -605,8 +605,6 @@ with tab4:
         st.session_state.aktiva_tetap = pd.DataFrame([{"Item": "", "Jumlah (Rp)": 0}])
         st.session_state.kewajiban = pd.DataFrame([{"Item": "", "Jumlah (Rp)": 0}])
         st.session_state.modal_data = {"modal_awal": 0}
-        
-        # ✅ TAMBAHAN: Clear data Arus Kas
         st.session_state.arus_kas_operasi = pd.DataFrame([{"Aktivitas": "", "Jumlah (Rp)": 0}])
         st.session_state.arus_kas_investasi = pd.DataFrame([{"Aktivitas": "", "Jumlah (Rp)": 0}])
         st.session_state.arus_kas_pendanaan = pd.DataFrame([{"Aktivitas": "", "Jumlah (Rp)": 0}])
@@ -617,97 +615,50 @@ with tab4:
             debit = row["Debit (Rp)"] if pd.notna(row["Debit (Rp)"]) else 0
             kredit = row["Kredit (Rp)"] if pd.notna(row["Kredit (Rp)"]) else 0
             
-            # ==========================================
-            # LABA/RUGI: Pendapatan & Beban
-            # ==========================================
+            # Pendapatan
             if "pendapatan" in nama_akun or "penjualan" in nama_akun or "penerimaan" in nama_akun:
-                new_row = pd.DataFrame([{
-                    "Jenis Pendapatan": row["Akun"], 
-                    "Debit (Rp)": debit,
-                    "Kredit (Rp)": kredit
-                }])
+                new_row = pd.DataFrame([{"Jenis Pendapatan": row["Akun"], "Debit (Rp)": debit, "Kredit (Rp)": kredit}])
                 st.session_state.pendapatan = pd.concat([st.session_state.pendapatan, new_row], ignore_index=True)
+                # Arus Kas Operasi (Penerimaan)
+                if kredit > 0:
+                    new_row_ak = pd.DataFrame([{"Aktivitas": row["Akun"], "Jumlah (Rp)": kredit}])
+                    st.session_state.arus_kas_operasi = pd.concat([st.session_state.arus_kas_operasi, new_row_ak], ignore_index=True)
             
+            # Beban
             elif "beban" in nama_akun or "biaya" in nama_akun or "gaji" in nama_akun or "sewa" in nama_akun or "pembayaran" in nama_akun:
-                new_row = pd.DataFrame([{
-                    "Jenis Beban": row["Akun"], 
-                    "Debit (Rp)": debit,
-                    "Kredit (Rp)": kredit
-                }])
+                new_row = pd.DataFrame([{"Jenis Beban": row["Akun"], "Debit (Rp)": debit, "Kredit (Rp)": kredit}])
                 st.session_state.beban = pd.concat([st.session_state.beban, new_row], ignore_index=True)
+                # Arus Kas Operasi (Pembayaran)
+                if debit > 0:
+                    new_row_ak = pd.DataFrame([{"Aktivitas": row["Akun"], "Jumlah (Rp)": -debit}])
+                    st.session_state.arus_kas_operasi = pd.concat([st.session_state.arus_kas_operasi, new_row_ak], ignore_index=True)
             
-            # ==========================================
-            # NERACA: Aktiva Lancar
-            # ==========================================
+            # Aktiva Lancar
             elif "kas" in nama_akun or "perlengkapan" in nama_akun or "piutang" in nama_akun:
                 new_row = pd.DataFrame([{"Item": row["Akun"], "Jumlah (Rp)": debit}])
                 st.session_state.aktiva_lancar = pd.concat([st.session_state.aktiva_lancar, new_row], ignore_index=True)
             
-            # NERACA: Aktiva Tetap
+            # Aktiva Tetap
             elif "peralatan" in nama_akun or "gedung" in nama_akun or "kendaraan" in nama_akun:
                 new_row = pd.DataFrame([{"Item": row["Akun"], "Jumlah (Rp)": debit}])
                 st.session_state.aktiva_tetap = pd.concat([st.session_state.aktiva_tetap, new_row], ignore_index=True)
+                # Arus Kas Investasi (Pembelian Aset)
+                if debit > 0:
+                    new_row_ak = pd.DataFrame([{"Aktivitas": f"Pembelian {row['Akun']}", "Jumlah (Rp)": -debit}])
+                    st.session_state.arus_kas_investasi = pd.concat([st.session_state.arus_kas_investasi, new_row_ak], ignore_index=True)
             
-            # NERACA: Modal
+            # Modal
             elif "modal" in nama_akun:
                 st.session_state.modal_data["modal_awal"] = kredit
+                # Arus Kas Pendanaan (Setoran Modal)
+                if kredit > 0:
+                    new_row_ak = pd.DataFrame([{"Aktivitas": "Setoran Modal", "Jumlah (Rp)": kredit}])
+                    st.session_state.arus_kas_pendanaan = pd.concat([st.session_state.arus_kas_pendanaan, new_row_ak], ignore_index=True)
             
-            # NERACA: Kewajiban
+            # Kewajiban
             elif "hutang" in nama_akun or "utang" in nama_akun:
                 new_row = pd.DataFrame([{"Item": row["Akun"], "Jumlah (Rp)": kredit}])
                 st.session_state.kewajiban = pd.concat([st.session_state.kewajiban, new_row], ignore_index=True)
-            
-            # ==========================================
-            # ✅ ARUS KAS: Operasi
-            # ==========================================
-            # Penerimaan (Kredit) = Kas Masuk dari Operasi
-            if ("pendapatan" in nama_akun or "penerimaan" in nama_akun or "penjualan" in nama_akun) and kredit > 0:
-                new_row = pd.DataFrame([{
-                    "Aktivitas": row["Akun"], 
-                    "Jumlah (Rp)": kredit
-                }])
-                st.session_state.arus_kas_operasi = pd.concat([st.session_state.arus_kas_operasi, new_row], ignore_index=True)
-            
-            # Pembayaran (Debit pada Beban) = Kas Keluar dari Operasi
-            elif ("beban" in nama_akun or "pembayaran" in nama_akun or "gaji" in nama_akun or 
-                  "sewa" in nama_akun or "bbm" in nama_akun or "listrik" in nama_akun or 
-                  "air" in nama_akun or "perawatan" in nama_akun) and debit > 0:
-                new_row = pd.DataFrame([{
-                    "Aktivitas": row["Akun"], 
-                    "Jumlah (Rp)": -debit  # Negatif karena kas keluar
-                }])
-                st.session_state.arus_kas_operasi = pd.concat([st.session_state.arus_kas_operasi, new_row], ignore_index=True)
-            
-            # ==========================================
-            # ✅ ARUS KAS: Investasi
-            # ==========================================
-            # Pembelian Aset Tetap (Debit) = Kas Keluar Investasi
-            if ("peralatan" in nama_akun or "perlengkapan" in nama_akun or "gedung" in nama_akun or 
-                "kendaraan" in nama_akun or "pembelian" in nama_akun) and debit > 0:
-                new_row = pd.DataFrame([{
-                    "Aktivitas": f"Pembelian {row['Akun']}", 
-                    "Jumlah (Rp)": -debit  # Negatif karena kas keluar
-                }])
-                st.session_state.arus_kas_investasi = pd.concat([st.session_state.arus_kas_investasi, new_row], ignore_index=True)
-            
-            # ==========================================
-            # ✅ ARUS KAS: Pendanaan
-            # ==========================================
-            # Setoran Modal (Kredit) = Kas Masuk Pendanaan
-            if "modal" in nama_akun and kredit > 0:
-                new_row = pd.DataFrame([{
-                    "Aktivitas": "Setoran Modal", 
-                    "Jumlah (Rp)": kredit
-                }])
-                st.session_state.arus_kas_pendanaan = pd.concat([st.session_state.arus_kas_pendanaan, new_row], ignore_index=True)
-            
-            # Hutang/Utang (Kredit) = Kas Masuk Pendanaan
-            elif ("hutang" in nama_akun or "utang" in nama_akun or "pinjaman" in nama_akun) and kredit > 0:
-                new_row = pd.DataFrame([{
-                    "Aktivitas": row["Akun"], 
-                    "Jumlah (Rp)": kredit
-                }])
-                st.session_state.arus_kas_pendanaan = pd.concat([st.session_state.arus_kas_pendanaan, new_row], ignore_index=True)
         
         st.session_state.pendapatan_loaded = True
 
@@ -719,7 +670,7 @@ with tab4:
     ])
     
     # ========================================
-    # SUB-TAB 1: LAPORAN LABA/RUGI (REVISED)
+    # SUB-TAB 1: LAPORAN LABA/RUGI
     # ========================================
     with subtab1:
         st.markdown("### 📈 Laporan Laba/Rugi")
@@ -870,7 +821,6 @@ with tab4:
                 })
             
             result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
-            # Tampilkan Total Pendapatan (Kredit - Debit) di kolom Kredit jika positif
             if total_pendapatan >= 0:
                 result_data.append({"Keterangan": "Total Pendapatan", "Debit": "", "Kredit": total_pendapatan})
             else:
@@ -889,7 +839,6 @@ with tab4:
                 })
             
             result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
-            # Tampilkan Total Beban (Debit - Kredit) di kolom Debit jika positif
             if total_beban >= 0:
                 result_data.append({"Keterangan": "Total Beban", "Debit": total_beban, "Kredit": ""})
             else:
@@ -897,7 +846,6 @@ with tab4:
             
             result_data.append({"Keterangan": "", "Debit": "", "Kredit": ""})
             
-            # Laba/Rugi Bersih
             if st.session_state.laba_bersih >= 0:
                 result_data.append({"Keterangan": "Laba Bersih", "Debit": "", "Kredit": st.session_state.laba_bersih})
             else:
@@ -917,7 +865,7 @@ with tab4:
                 hide_index=True
             )
             
-            # PDF Export Laba/Rugi (DIPERBAIKI)
+            # PDF Export Laba/Rugi (LENGKAP)
             def buat_pdf_labarugi(df, bulan, tahun):
                 pdf = FPDF()
                 pdf.add_page()
@@ -943,7 +891,6 @@ with tab4:
                     ket = str(row["Keterangan"])[:40] + "..." if len(str(row["Keterangan"])) > 43 else str(row["Keterangan"])
                     pdf.cell(90, 8, ket, border=1, align="L")
                     
-                    # ✅ FIX: Gunakan nama kolom yang benar ("Debit" bukan "Debit (Rp)")
                     debit_text = format_rupiah(row["Debit"]) if isinstance(row["Debit"], (int, float)) and row["Debit"] != 0 else ""
                     pdf.cell(45, 8, debit_text, border=1, align="R")
                     
@@ -962,6 +909,15 @@ with tab4:
                     pdf.output(tmp.name)
                     tmp.seek(0)
                     return tmp.read()
+
+            pdf_labarugi = buat_pdf_labarugi(df_labarugi, bulan_laporan, tahun_laporan)
+            st.download_button(
+                "📥 Download PDF Laba/Rugi",
+                data=pdf_labarugi,
+                file_name=f"laporan_labarugi_{bulan_laporan}_{tahun_laporan}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
     
     # ========================================
     # SUB-TAB 2: LAPORAN NERACA
@@ -1141,11 +1097,9 @@ with tab4:
         
         total_kewajiban = df_kewajiban_clean["Jumlah (Rp)"].sum() if not df_kewajiban_clean.empty else 0
         
-        # GUNAKAN laba_bersih dari session_state
         modal_akhir = modal_awal + st.session_state.laba_bersih
         total_passiva = total_kewajiban + modal_akhir
         
-        # Pastikan numeric
         total_aktiva = 0 if pd.isna(total_aktiva) else float(total_aktiva)
         total_passiva = 0 if pd.isna(total_passiva) else float(total_passiva)
 
@@ -1201,7 +1155,7 @@ with tab4:
             hide_index=True
         )
         
-        # PDF Export Neraca (LENGKAP & DIPERBAIKI)
+        # PDF Export Neraca (LENGKAP)
         def buat_pdf_neraca_lap(df, bulan, tahun):
             pdf = FPDF()
             pdf.add_page()
@@ -1227,19 +1181,15 @@ with tab4:
                 if is_bold:
                     pdf.set_font("Arial", 'B', 9)
                 
-                # Kolom 1: Aktiva
                 aktiva_text = str(row["Aktiva"])[:28] + "..." if len(str(row["Aktiva"])) > 30 else str(row["Aktiva"])
                 pdf.cell(col_widths[0], 8, aktiva_text, border=1, align="L")
                 
-                # Kolom 2: Jumlah Aktiva
                 jumlah1_text = format_rupiah(row["Jumlah1"]) if isinstance(row["Jumlah1"], (int, float)) and row["Jumlah1"] != 0 else ""
                 pdf.cell(col_widths[1], 8, jumlah1_text, border=1, align="R")
                 
-                # Kolom 3: Passiva
                 passiva_text = str(row["Passiva"])[:28] + "..." if len(str(row["Passiva"])) > 30 else str(row["Passiva"])
                 pdf.cell(col_widths[2], 8, passiva_text, border=1, align="L")
                 
-                # Kolom 4: Jumlah Passiva
                 jumlah2_text = format_rupiah(row["Jumlah2"]) if isinstance(row["Jumlah2"], (int, float)) and row["Jumlah2"] != 0 else ""
                 pdf.cell(col_widths[3], 8, jumlah2_text, border=1, align="R")
                 
@@ -1256,6 +1206,15 @@ with tab4:
                 pdf.output(tmp.name)
                 tmp.seek(0)
                 return tmp.read()
+
+        pdf_neraca = buat_pdf_neraca_lap(df_neraca_lap, bulan_laporan, tahun_laporan)
+        st.download_button(
+            "📥 Download PDF Neraca",
+            data=pdf_neraca,
+            file_name=f"laporan_neraca_{bulan_laporan}_{tahun_laporan}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
     
     # ========================================
     # SUB-TAB 3: ARUS KAS (DENGAN RELOAD)
