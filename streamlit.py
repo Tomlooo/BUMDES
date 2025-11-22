@@ -865,7 +865,7 @@ with tab4:
                 hide_index=True
             )
             
-            # PDF Export Laba/Rugi (LENGKAP)
+            # PDF Export Laba/Rugi (FIXED)
             def buat_pdf_labarugi(df, bulan, tahun):
                 pdf = FPDF()
                 pdf.add_page()
@@ -891,11 +891,25 @@ with tab4:
                     ket = str(row["Keterangan"])[:40] + "..." if len(str(row["Keterangan"])) > 43 else str(row["Keterangan"])
                     pdf.cell(90, 8, ket, border=1, align="L")
                     
-                    debit_text = format_rupiah(row["Debit"]) if isinstance(row["Debit"], (int, float)) and row["Debit"] != 0 else ""
+                    # ✅ FIX: Tampilkan semua nilai termasuk 0, kecuali string kosong atau NaN
+                    debit_val = row["Debit"]
+                    if pd.notna(debit_val) and debit_val != "" and debit_val != 0:
+                        debit_text = format_rupiah(debit_val)
+                    elif isinstance(debit_val, (int, float)) and debit_val == 0 and is_bold:
+                        debit_text = "-"  # Total yang 0 tampilkan "-"
+                    else:
+                        debit_text = ""
                     pdf.cell(45, 8, debit_text, border=1, align="R")
                     
-                    kredit_text = format_rupiah(row["Kredit"]) if isinstance(row["Kredit"], (int, float)) and row["Kredit"] != 0 else ""
+                    kredit_val = row["Kredit"]
+                    if pd.notna(kredit_val) and kredit_val != "" and kredit_val != 0:
+                        kredit_text = format_rupiah(kredit_val)
+                    elif isinstance(kredit_val, (int, float)) and kredit_val == 0 and is_bold:
+                        kredit_text = "-"  # Total yang 0 tampilkan "-"
+                    else:
+                        kredit_text = ""
                     pdf.cell(45, 8, kredit_text, border=1, align="R")
+                    
                     pdf.ln()
                     
                     if is_bold:
@@ -909,15 +923,6 @@ with tab4:
                     pdf.output(tmp.name)
                     tmp.seek(0)
                     return tmp.read()
-
-            pdf_labarugi = buat_pdf_labarugi(df_labarugi, bulan_laporan, tahun_laporan)
-            st.download_button(
-                "📥 Download PDF Laba/Rugi",
-                data=pdf_labarugi,
-                file_name=f"laporan_labarugi_{bulan_laporan}_{tahun_laporan}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
     
     # ========================================
     # SUB-TAB 2: LAPORAN NERACA
@@ -1155,7 +1160,7 @@ with tab4:
             hide_index=True
         )
         
-        # PDF Export Neraca (LENGKAP)
+        # PDF Export Neraca (FIXED)
         def buat_pdf_neraca_lap(df, bulan, tahun):
             pdf = FPDF()
             pdf.add_page()
@@ -1181,16 +1186,32 @@ with tab4:
                 if is_bold:
                     pdf.set_font("Arial", 'B', 9)
                 
+                # Kolom 1: Aktiva
                 aktiva_text = str(row["Aktiva"])[:28] + "..." if len(str(row["Aktiva"])) > 30 else str(row["Aktiva"])
                 pdf.cell(col_widths[0], 8, aktiva_text, border=1, align="L")
                 
-                jumlah1_text = format_rupiah(row["Jumlah1"]) if isinstance(row["Jumlah1"], (int, float)) and row["Jumlah1"] != 0 else ""
+                # Kolom 2: Jumlah Aktiva (✅ FIXED)
+                jumlah1_val = row["Jumlah1"]
+                if pd.notna(jumlah1_val) and jumlah1_val != "" and jumlah1_val != 0:
+                    jumlah1_text = format_rupiah(jumlah1_val)
+                elif isinstance(jumlah1_val, (int, float)) and jumlah1_val == 0:
+                    jumlah1_text = "-"  # Tampilkan "-" untuk nilai 0
+                else:
+                    jumlah1_text = ""
                 pdf.cell(col_widths[1], 8, jumlah1_text, border=1, align="R")
                 
+                # Kolom 3: Passiva
                 passiva_text = str(row["Passiva"])[:28] + "..." if len(str(row["Passiva"])) > 30 else str(row["Passiva"])
                 pdf.cell(col_widths[2], 8, passiva_text, border=1, align="L")
                 
-                jumlah2_text = format_rupiah(row["Jumlah2"]) if isinstance(row["Jumlah2"], (int, float)) and row["Jumlah2"] != 0 else ""
+                # Kolom 4: Jumlah Passiva (✅ FIXED)
+                jumlah2_val = row["Jumlah2"]
+                if pd.notna(jumlah2_val) and jumlah2_val != "" and jumlah2_val != 0:
+                    jumlah2_text = format_rupiah(jumlah2_val)
+                elif isinstance(jumlah2_val, (int, float)) and jumlah2_val == 0:
+                    jumlah2_text = "-"  # Tampilkan "-" untuk nilai 0
+                else:
+                    jumlah2_text = ""
                 pdf.cell(col_widths[3], 8, jumlah2_text, border=1, align="R")
                 
                 pdf.ln()
@@ -1206,15 +1227,6 @@ with tab4:
                 pdf.output(tmp.name)
                 tmp.seek(0)
                 return tmp.read()
-
-        pdf_neraca = buat_pdf_neraca_lap(df_neraca_lap, bulan_laporan, tahun_laporan)
-        st.download_button(
-            "📥 Download PDF Neraca",
-            data=pdf_neraca,
-            file_name=f"laporan_neraca_{bulan_laporan}_{tahun_laporan}.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
     
     # ========================================
     # SUB-TAB 3: ARUS KAS (DENGAN RELOAD)
