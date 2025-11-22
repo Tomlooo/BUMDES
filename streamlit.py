@@ -718,7 +718,7 @@ with tab4:
         "💸 Arus Kas"
     ])
     
-        # ========================================
+    # ========================================
     # SUB-TAB 1: LAPORAN LABA/RUGI (REVISED)
     # ========================================
     with subtab1:
@@ -917,7 +917,7 @@ with tab4:
                 hide_index=True
             )
             
-            # PDF Export
+            # PDF Export Laba/Rugi (DIPERBAIKI)
             def buat_pdf_labarugi(df, bulan, tahun):
                 pdf = FPDF()
                 pdf.add_page()
@@ -943,10 +943,11 @@ with tab4:
                     ket = str(row["Keterangan"])[:40] + "..." if len(str(row["Keterangan"])) > 43 else str(row["Keterangan"])
                     pdf.cell(90, 8, ket, border=1, align="L")
                     
-                    debit_text = format_rupiah(row["Debit"]) if isinstance(row["Debit"], (int, float)) else ""
+                    # ✅ FIX: Gunakan nama kolom yang benar ("Debit" bukan "Debit (Rp)")
+                    debit_text = format_rupiah(row["Debit"]) if isinstance(row["Debit"], (int, float)) and row["Debit"] != 0 else ""
                     pdf.cell(45, 8, debit_text, border=1, align="R")
                     
-                    kredit_text = format_rupiah(row["Kredit"]) if isinstance(row["Kredit"], (int, float)) else ""
+                    kredit_text = format_rupiah(row["Kredit"]) if isinstance(row["Kredit"], (int, float)) and row["Kredit"] != 0 else ""
                     pdf.cell(45, 8, kredit_text, border=1, align="R")
                     pdf.ln()
                     
@@ -961,15 +962,6 @@ with tab4:
                     pdf.output(tmp.name)
                     tmp.seek(0)
                     return tmp.read()
-
-            pdf_labarugi = buat_pdf_labarugi(df_labarugi, bulan_laporan, tahun_laporan)
-            st.download_button(
-                "📥 Download PDF Laba/Rugi",
-                data=pdf_labarugi,
-                file_name=f"laporan_labarugi_{bulan_laporan}_{tahun_laporan}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
     
     # ========================================
     # SUB-TAB 2: LAPORAN NERACA
@@ -1209,7 +1201,7 @@ with tab4:
             hide_index=True
         )
         
-        # PDF Export
+        # PDF Export Neraca (DIPERBAIKI)
         def buat_pdf_neraca_lap(df, bulan, tahun):
             pdf = FPDF()
             pdf.add_page()
@@ -1221,38 +1213,7 @@ with tab4:
             pdf.ln(5)
             pdf.set_font("Arial", 'B', 10)
             col_widths = [60, 30, 60, 30]
-            for h in ["Aktiva", "Jumlah (Rp)", "Passiva", "Jumlah (Rp)"]:
-                pdf.cell(col_widths[0] if h == "Aktiva" else (col_widths[2] if h == "Passiva" else col_widths[1]), 10, h, border=1, align="C")
-            pdf.ln()
-            pdf.set_font("Arial", '', 9)
-            for idx in range(len(df)):
-                row = df.iloc[idx]
-                is_bold = 'Jml' in str(row.get('Aktiva', '')) or 'Jml' in str(row.get('Passiva', ''))
-                if is_bold:
-                    pdf.set_font("Arial", 'B', 9)
-                pdf.cell(col_widths[0], 8, str(row["Aktiva"]), border=1, align="L")
-                pdf.cell(col_widths[1], 8, format_rupiah(row["Jumlah1"]) if isinstance(row["Jumlah1"], (int, float)) else "", border=1, align="R")
-                pdf.cell(col_widths[2], 8, str(row["Passiva"]), border=1, align="L")
-                pdf.cell(col_widths[3], 8, format_rupiah(row["Jumlah2"]) if isinstance(row["Jumlah2"], (int, float)) else "", border=1, align="R")
-                pdf.ln()
-                if is_bold:
-                    pdf.set_font("Arial", '', 9)
-            pdf.ln(5)
-            pdf.set_font("Arial", 'I', 8)
-            pdf.cell(0, 5, txt="Dicetak dari Sistem Akuntansi BUMDes", ln=True, align="C")
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                pdf.output(tmp.name)
-                tmp.seek(0)
-                return tmp.read()
-
-        pdf_neraca = buat_pdf_neraca_lap(df_neraca_lap, bulan_laporan, tahun_laporan)
-        st.download_button(
-            "📥 Download PDF Neraca",
-            data=pdf_neraca,
-            file_name=f"laporan_neraca_{bulan_laporan}_{tahun_laporan}.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
+            headers = ["Aktiva",
     
     # ========================================
     # SUB-TAB 3: ARUS KAS (DENGAN RELOAD)
